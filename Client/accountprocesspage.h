@@ -9,7 +9,9 @@ class QLabel;
 class QPushButton;
 class QFrame;
 class QLineEdit;
-class QTableWidget;
+class QVBoxLayout;
+class QScrollArea;
+class QComboBox;
 class QRadioButton;
 class QDoubleSpinBox;
 
@@ -20,12 +22,15 @@ class AccountProcessPage : public QWidget
 public:
     explicit AccountProcessPage(QWidget *parent = nullptr);
 
+public slots:
     void loadAccounts();
 
+protected:
+    void showEvent(QShowEvent *event) override;
+
 private slots:
-    void onSearchChanged(const QString &keyword);
-    void onAccountSelected(int row, int column);
-    void onTransactionClicked();
+    void onAccountChanged(int index);
+    void onExecuteClicked();
     void onResponseReceived(const QJsonObject &response);
 
 private:
@@ -33,24 +38,30 @@ private:
     void setupLeftPanel();
     void setupRightPanel();
 
-    void refreshTable(const QJsonArray &accounts);
     void loadAccountDetail(const QString &accountNumber);
-    void showDetail(const QJsonObject &account);
+    void clearHistoryLabels();
+    void addHistoryLabel(const QString &type, const QString &accountNumber, const QString &text);
+    void updateTotalLabel();
 
 private:
     QFrame *m_leftCard;
     QFrame *m_rightCard;
 
     // 좌측
-    QLabel *m_leftTitleLabel;
-    QLineEdit *m_searchEdit;
-    QTableWidget *m_accountTable;
+    QLabel *m_titleLabel;
+    QComboBox *m_accountCombo;
+    QLabel *m_accountNumberLabel;
+    QLabel *m_balanceLabel;
 
-    // 우측 상세
-    QLabel *m_rightTitleLabel;
-    QLabel *m_accountNumberValueLabel;
-    QLabel *m_accountTypeValueLabel;
-    QLabel *m_balanceValueLabel;
+    QWidget *m_historyContainer;
+    QVBoxLayout *m_historyLayout;
+    QLabel *m_totalLabel;
+
+    // 우측
+    QLabel *m_detailTitleLabel;
+    QLabel *m_selectedAccountLabel;
+    QLabel *m_selectedTypeLabel;
+    QLabel *m_selectedBalanceLabel;
 
     QLineEdit *m_accountPasswordEdit;
     QRadioButton *m_depositRadio;
@@ -59,9 +70,11 @@ private:
     QLineEdit *m_descriptionEdit;
     QPushButton *m_executeBtn;
 
-    QTableWidget *m_transactionTable;
+    QString m_currentAccountNumber;
+    QString m_currentAccountType;
+    int m_currentBalance;
+    int m_historyCount;
 
-    QString m_selectedAccountNumber;
     QJsonArray m_allAccounts;
 };
 
