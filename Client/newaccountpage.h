@@ -1,0 +1,4 @@
+#ifndef NEWACCOUNTPAGE_H
+#define NEWACCOUNTPAGE_H
+
+#endif // NEWACCOUNTPAGE_H
