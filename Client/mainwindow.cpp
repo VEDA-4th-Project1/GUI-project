@@ -1,7 +1,11 @@
 #include "mainwindow.h"
 #include "sessioncontext.h"
 #include "newaccountpage.h"
+#include "accountprocesspage.h"
+#include "logindialog.h"
+#include "networkclient.h"
 
+#include <QApplication>
 #include <QWidget>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -10,6 +14,7 @@
 #include <QStackedWidget>
 #include <QFont>
 #include <QFrame>
+#include <QJsonObject>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), userName(SessionContext::instance().userName()), money(0)
@@ -83,9 +88,29 @@ MainWindow::MainWindow(QWidget *parent)
             );
     }
 
+    // 로그아웃 버튼 (팀원2 추가)
+    btnLogout = new QPushButton("로그아웃");
+    btnLogout->setCursor(Qt::PointingHandCursor);
+    btnLogout->setMinimumHeight(35);
+    btnLogout->setStyleSheet(
+        "QPushButton {"
+        "   background-color: #EF4444;"
+        "   color: white;"
+        "   border-radius: 8px;"
+        "   font-size: 13px;"
+        "   font-weight: bold;"
+        "   margin: 5px 0px;"
+        "}"
+        "QPushButton:hover {"
+        "   background-color: #DC2626;"
+        "}"
+        );
+
     sideLayout->addWidget(logoLabel);
     sideLayout->addWidget(userLabel);
-    sideLayout->addSpacing(8);
+    sideLayout->addSpacing(5);
+    sideLayout->addWidget(btnLogout);
+    sideLayout->addSpacing(10);
     sideLayout->addWidget(line);
     sideLayout->addSpacing(10);
     sideLayout->addWidget(btnHome);
@@ -166,21 +191,8 @@ MainWindow::MainWindow(QWidget *parent)
     myCardLayout->addStretch();
     myInfoLayout->addWidget(myInfoCard);
 
-    // 계좌처리 화면
-    pageAccountProcess = new QWidget;
-    QVBoxLayout *accountProcessLayout = new QVBoxLayout(pageAccountProcess);
-    accountProcessLayout->setContentsMargins(40, 40, 40, 40);
-    QWidget *accountCard = new QWidget;
-    accountCard->setStyleSheet(
-        "background-color: white;"
-        "border-radius: 20px;"
-        "border: 1px solid #E5E7EB;"
-        );
-    QVBoxLayout *accountCardLayout = new QVBoxLayout(accountCard);
-    accountCardLayout->setContentsMargins(30, 30, 30, 30);
-    accountCardLayout->addWidget(new QLabel("계좌처리 화면"));
-    accountCardLayout->addStretch();
-    accountProcessLayout->addWidget(accountCard);
+    // 계좌처리 화면 (팀원 모듈)
+    pageAccountProcess = new AccountProcessPage(this);
 
     stackedWidget->addWidget(pageHome);
     stackedWidget->addWidget(pageNewAccount);
@@ -194,6 +206,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(btnNewAccount, SIGNAL(clicked()), this, SLOT(goNewAccount()));
     connect(btnMyInfo, SIGNAL(clicked()), this, SLOT(goMyInfo()));
     connect(btnAccountProcess, SIGNAL(clicked()), this, SLOT(goAccountProcess()));
+    connect(btnLogout, &QPushButton::clicked, this, &MainWindow::onLogoutClicked);
 
     stackedWidget->setCurrentWidget(pageHome);
     updateMenuStyle(btnHome);
@@ -267,4 +280,23 @@ void MainWindow::goAccountProcess()
 {
     stackedWidget->setCurrentWidget(pageAccountProcess);
     updateMenuStyle(btnAccountProcess);
+
+}
+
+void MainWindow::onLogoutClicked()
+{
+    QJsonObject request;
+    request["type"]  = "logout";
+    request["token"] = SessionContext::instance().token();
+    request["data"]  = QJsonObject{};
+
+    NetworkClient::instance()->sendRequest(request);
+
+    SessionContext::instance().clear();
+
+    LoginDialog *loginDlg = new LoginDialog();
+    loginDlg->setAttribute(Qt::WA_DeleteOnClose);
+    loginDlg->show();
+
+    this->close();
 }

@@ -8,6 +8,7 @@ class QWidget;
 class QLabel;
 class QPushButton;
 class NewAccountPage;
+class AccountProcessPage;
 
 class MainWindow : public QMainWindow
 {
@@ -22,6 +23,7 @@ private slots:
     void goNewAccount();
     void goMyInfo();
     void goAccountProcess();
+    void onLogoutClicked();
 
 private:
     QString userName;
@@ -32,7 +34,7 @@ private:
     QWidget *pageHome;
     NewAccountPage *pageNewAccount;
     QWidget *pageMyInfo;
-    QWidget *pageAccountProcess;
+    AccountProcessPage *pageAccountProcess;
 
     QLabel *labelWelcome;
     QLabel *labelMoney;
@@ -41,6 +43,7 @@ private:
     QPushButton *btnNewAccount;
     QPushButton *btnMyInfo;
     QPushButton *btnAccountProcess;
+    QPushButton *btnLogout;
 
     void updateMenuStyle(QPushButton *selectedButton);
 };
