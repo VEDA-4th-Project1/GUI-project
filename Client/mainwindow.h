@@ -7,6 +7,7 @@ class QStackedWidget;
 class QWidget;
 class QLabel;
 class QPushButton;
+class NewAccountPage;
 
 class MainWindow : public QMainWindow
 {
@@ -29,7 +30,7 @@ private:
     QStackedWidget *stackedWidget;
 
     QWidget *pageHome;
-    QWidget *pageNewAccount;
+    NewAccountPage *pageNewAccount;
     QWidget *pageMyInfo;
     QWidget *pageAccountProcess;
 

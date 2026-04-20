@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "sessioncontext.h"
+#include "newaccountpage.h"
 
 #include <QWidget>
 #include <QHBoxLayout>
@@ -147,20 +148,7 @@ MainWindow::MainWindow(QWidget *parent)
     homeLayout->addStretch();
 
     // 신규계좌 관리 화면
-    pageNewAccount = new QWidget;
-    QVBoxLayout *newAccountLayout = new QVBoxLayout(pageNewAccount);
-    newAccountLayout->setContentsMargins(40, 40, 40, 40);
-    QWidget *newAccountCard = new QWidget;
-    newAccountCard->setStyleSheet(
-        "background-color: white;"
-        "border-radius: 20px;"
-        "border: 1px solid #E5E7EB;"
-        );
-    QVBoxLayout *newCardLayout = new QVBoxLayout(newAccountCard);
-    newCardLayout->setContentsMargins(30, 30, 30, 30);
-    newCardLayout->addWidget(new QLabel("신규계좌 관리 화면"));
-    newCardLayout->addStretch();
-    newAccountLayout->addWidget(newAccountCard);
+    pageNewAccount = new NewAccountPage(this);
 
     // 내정보 화면
     pageMyInfo = new QWidget;
