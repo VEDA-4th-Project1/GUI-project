@@ -7,6 +7,7 @@ class QStackedWidget;
 class QWidget;
 class QLabel;
 class QPushButton;
+class HomePage;
 class NewAccountPage;
 class AccountProcessPage;
 
@@ -27,17 +28,13 @@ private slots:
 
 private:
     QString userName;
-    int money;
 
     QStackedWidget *stackedWidget;
 
-    QWidget *pageHome;
+    HomePage *pageHome;
     NewAccountPage *pageNewAccount;
     QWidget *pageMyInfo;
     AccountProcessPage *pageAccountProcess;
-
-    QLabel *labelWelcome;
-    QLabel *labelMoney;
 
     QPushButton *btnHome;
     QPushButton *btnNewAccount;

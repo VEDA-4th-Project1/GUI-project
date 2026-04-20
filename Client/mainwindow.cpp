@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "sessioncontext.h"
+#include "homepage.h"
 #include "newaccountpage.h"
 #include "accountprocesspage.h"
 #include "logindialog.h"
@@ -17,7 +18,7 @@
 #include <QJsonObject>
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), userName(SessionContext::instance().userName()), money(0)
+    : QMainWindow(parent), userName(SessionContext::instance().userName())
 {
     QWidget *central = new QWidget(this);
     setCentralWidget(central);
@@ -128,49 +129,7 @@ MainWindow::MainWindow(QWidget *parent)
         );
 
     // 홈 화면
-    pageHome = new QWidget;
-    QVBoxLayout *homeLayout = new QVBoxLayout(pageHome);
-    homeLayout->setContentsMargins(40, 40, 40, 40);
-    homeLayout->setSpacing(20);
-
-    QWidget *homeCard = new QWidget;
-    homeCard->setStyleSheet(
-        "background-color: white;"
-        "border-radius: 20px;"
-        "border: 1px solid #E5E7EB;"
-        );
-
-    QVBoxLayout *cardLayout = new QVBoxLayout(homeCard);
-    cardLayout->setContentsMargins(30, 30, 30, 30);
-    cardLayout->setSpacing(16);
-
-    labelWelcome = new QLabel(QString("%1님 환영합니다").arg(userName)); // 서버 입력
-    labelMoney = new QLabel(QString("보유 금액 : %1원").arg(money)); // 서버 입력
-
-    labelWelcome->setStyleSheet(
-        "font-size: 28px;"
-        "font-weight: 700;"
-        "color: #111827;"
-        );
-
-    labelMoney->setStyleSheet(
-        "font-size: 20px;"
-        "font-weight: 600;"
-        "color: #2563EB;"
-        );
-
-    QLabel *subText = new QLabel("간편 계좌 관리 시스템에 오신 것을 환영합니다.");
-    subText->setStyleSheet(
-        "font-size: 14px;"
-        "color: #6B7280;"
-        );
-
-    cardLayout->addWidget(labelWelcome);
-    cardLayout->addWidget(labelMoney);
-    cardLayout->addWidget(subText);
-
-    homeLayout->addWidget(homeCard);
-    homeLayout->addStretch();
+    pageHome = new HomePage(userName, this);
 
     // 신규계좌 관리 화면
     pageNewAccount = new NewAccountPage(this);
@@ -258,8 +217,6 @@ void MainWindow::updateMenuStyle(QPushButton *selectedButton)
 
 void MainWindow::goHome()
 {
-    labelWelcome->setText(QString("%1님 환영합니다").arg(userName));
-    labelMoney->setText(QString("보유 금액 : %1원").arg(money));
     stackedWidget->setCurrentWidget(pageHome);
     updateMenuStyle(btnHome);
 }

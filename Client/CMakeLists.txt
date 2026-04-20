@@ -15,6 +15,8 @@ qt_add_executable(BankClient
     registerdialog.h
     logindialog.cpp
     logindialog.h
+    homepage.h
+    homepage.cpp
     newaccountpage.h
     myinfopage.h
     accountprocesspage.h
