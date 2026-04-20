@@ -121,5 +121,7 @@ compile_commands.json
 *.cxxflags
 *.cflags
 
-
+# Build/
+build/
+build/Qt_6_11_0_for_macOS-Debug/
 # End of https://www.toptal.com/developers/gitignore/api/qt,qtcreator,macos

@@ -1,2 +1,0 @@
-set(__QT_DEPLOY_TARGET_BankServer_FILE /Users/mainvoid00/Veda/Qt_project/Server/build/Qt_6_11_0_for_macOS-Debug/BankServer)
-set(__QT_DEPLOY_TARGET_BankServer_TYPE EXECUTABLE)
