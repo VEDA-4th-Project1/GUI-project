@@ -36,6 +36,8 @@ void NetworkClient::sendRequest(const QJsonObject& request) {
     if (isConnected()) {
         m_socket->write(QJsonDocument(request).toJson(QJsonDocument::Compact) + "\n");
         m_socket->flush();
+        m_hasPendingRequest = false;   // 전송 완료 → 재연결 시 재전송 방지
+        m_pendingRequest    = QJsonObject();
     } else {
         // 연결 안 돼 있으면 재연결 시도 → onConnected에서 자동 재전송
         connectToServer(m_host.isEmpty() ? "127.0.0.1" : m_host,
@@ -53,6 +55,8 @@ void NetworkClient::onConnected() {
     if (m_hasPendingRequest) {
         m_socket->write(QJsonDocument(m_pendingRequest).toJson(QJsonDocument::Compact) + "\n");
         m_socket->flush();
+        m_hasPendingRequest = false;   // 재전송 완료 → 중복 방지
+        m_pendingRequest    = QJsonObject();
     }
 }
 
