@@ -1,11 +1,14 @@
 #include "logindialog.h"
 #include "registerdialog.h"
 #include "mainwindow.h"
+#include "networkclient.h"
+#include "sessioncontext.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QMessageBox>
 #include <QGraphicsDropShadowEffect>
+#include <QJsonObject>
 
 LoginDialog::LoginDialog(QWidget *parent)
     : QDialog(parent), m_mainWindow(nullptr)
@@ -14,6 +17,15 @@ LoginDialog::LoginDialog(QWidget *parent)
     applyStyles();
     setWindowTitle(tr("로그인"));
     setFixedSize(460, 520);
+
+    // 서버 응답을 이 다이얼로그에서 처리
+    connect(NetworkClient::instance(), &NetworkClient::responseReceived,
+            this, &LoginDialog::onNetworkResponse);
+    connect(NetworkClient::instance(), &NetworkClient::errorOccurred,
+            this, [this](const QString& msg) {
+                QMessageBox::critical(this, tr("네트워크 오류"), msg);
+                m_confirmBtn->setEnabled(true);
+            });
 }
 
 LoginDialog::~LoginDialog() = default;
@@ -110,7 +122,7 @@ void LoginDialog::applyStyles()
     setStyleSheet(R"(
         QDialog {
             background-color: #0f172a;
-            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
         }
     )");
 
@@ -156,8 +168,8 @@ void LoginDialog::onRegisterClicked()
 
 void LoginDialog::onConfirmClicked()
 {
-    QString id = m_idEdit->text().trimmed();
-    QString pw = m_pwEdit->text().trimmed();
+    const QString id = m_idEdit->text().trimmed();
+    const QString pw = m_pwEdit->text();
 
     if (id.isEmpty() || pw.isEmpty()) {
         QMessageBox::warning(this, tr("입력 오류"),
@@ -165,11 +177,40 @@ void LoginDialog::onConfirmClicked()
         return;
     }
 
-    // 지금은 임시로 입력만 하면 로그인 성공 처리
-    m_mainWindow = new MainWindow();
-    m_mainWindow->show();
+    // 서버에 로그인 요청
+    m_confirmBtn->setEnabled(false);
+    QJsonObject data;
+    data["id"]       = id;
+    data["password"] = pw;
+    QJsonObject req;
+    req["type"] = "login";
+    req["data"] = data;
+    NetworkClient::instance()->sendRequest(req);
+}
 
-    accept();   // 로그인창 닫기
+void LoginDialog::onNetworkResponse(const QJsonObject& resp)
+{
+    if (resp["type"].toString() != "login_response") return;
+
+    m_confirmBtn->setEnabled(true);
+
+    if (resp["status"].toString() == "success") {
+        QJsonObject respData = resp["data"].toObject();
+        QJsonObject user     = respData["user"].toObject();
+
+        // 세션 정보 저장
+        SessionContext::instance().setSession(
+            respData["token"].toString(),
+            user["id"].toString(),
+            user["name"].toString()
+        );
+
+        m_mainWindow = new MainWindow();
+        m_mainWindow->show();
+        accept();
+    } else {
+        QMessageBox::warning(this, tr("로그인 실패"), resp["message"].toString());
+    }
 }
 
 void LoginDialog::onCancelClicked()

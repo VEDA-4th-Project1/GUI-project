@@ -43,6 +43,16 @@ QJsonObject Bank::unauthorizedResponse(const QString& type) const {
 
 // ─── 요청 핸들러 ───────────────────────────────────────────────────────────
 
+// 아이디 중복 확인: 형식 검사 → 중복 여부만 확인하고 저장하지 않음
+QJsonObject Bank::handleCheckId(const QJsonObject& data) {
+    QString id = data["id"].toString().trimmed();
+    if (id.isEmpty() || id.length() < 3)
+        return errorResponse("check_id", "아이디는 3자 이상이어야 합니다");
+    if (m_userRepo.exists(id))
+        return errorResponse("check_id", "이미 사용 중인 아이디입니다");
+    return successResponse("check_id", "사용 가능한 아이디입니다");
+}
+
 // 회원가입: 입력값 유효성 검사 → 중복 id 확인 → User 객체 생성 후 저장
 QJsonObject Bank::handleRegister(const QJsonObject& data) {
     QString id       = data["id"].toString().trimmed();

@@ -59,7 +59,8 @@ void ClientHandler::processMessage(const QJsonObject& request) {
     QJsonObject response;
 
     // type 값에 따라 Bank의 해당 핸들러 메서드 호출
-    if      (type == "register")           response = m_bank->handleRegister(data);
+    if      (type == "check_id")            response = m_bank->handleCheckId(data);
+    else if (type == "register")           response = m_bank->handleRegister(data);
     else if (type == "login")              response = m_bank->handleLogin(data);
     else if (type == "logout")             response = m_bank->handleLogout(token);
     else if (type == "create_account")     response = m_bank->handleCreateAccount(token, data);
@@ -85,4 +86,5 @@ void ClientHandler::processMessage(const QJsonObject& request) {
 void ClientHandler::sendResponse(const QJsonObject& response) {
     QJsonDocument doc(response);
     m_socket->write(doc.toJson(QJsonDocument::Compact) + "\n");
+    m_socket->flush(); // 버퍼에 쌓인 데이터를 즉시 OS로 전송
 }

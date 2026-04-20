@@ -6,6 +6,7 @@
 #include <QPushButton>
 #include <QLabel>
 #include <QFrame>
+#include <QJsonObject>
 
 class MainWindow;
 
@@ -21,6 +22,9 @@ private slots:
     void onRegisterClicked();
     void onConfirmClicked();
     void onCancelClicked();
+
+    // 서버 응답 처리 (login_response)
+    void onNetworkResponse(const QJsonObject& response);
 
 private:
     void setupUI();

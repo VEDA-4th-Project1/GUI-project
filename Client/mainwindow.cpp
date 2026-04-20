@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "sessioncontext.h"
 
 #include <QWidget>
 #include <QHBoxLayout>
@@ -10,7 +11,7 @@
 #include <QFrame>
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), userName("홍길동"), money(0)//서버 넣어줘야함
+    : QMainWindow(parent), userName(SessionContext::instance().userName()), money(0)
 {
     QWidget *central = new QWidget(this);
     setCentralWidget(central);

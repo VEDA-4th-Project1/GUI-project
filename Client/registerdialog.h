@@ -6,8 +6,8 @@
 #include <QPushButton>
 #include <QLabel>
 #include <QFrame>
-#include <QSet>
 #include <QDateEdit>
+#include <QJsonObject>
 
 class RegisterDialog : public QDialog
 {
@@ -24,6 +24,9 @@ private slots:
     // 아이디 수정 시 중복확인 상태 초기화
     void onIdTextChanged();
 
+    // 서버 응답 처리 (check_id_response / register_response)
+    void onNetworkResponse(const QJsonObject& response);
+
 private:
     void setupUI();
     void applyStyles();
@@ -38,7 +41,7 @@ private:
     QLineEdit   *m_nameEdit;
 
     QLabel      *m_birthLabel;
-    QDateEdit   *m_birthEdit;       // ← QLineEdit 에서 QDateEdit 으로 변경
+    QDateEdit   *m_birthEdit;
 
     QLabel      *m_idLabel;
     QLineEdit   *m_idEdit;
@@ -54,9 +57,6 @@ private:
     QPushButton *m_cancelBtn;
 
     bool         m_idChecked = false;
-
-    // 중복 체크용 더미 아이디 목록
-    QSet<QString> m_existingIds;
 };
 
 

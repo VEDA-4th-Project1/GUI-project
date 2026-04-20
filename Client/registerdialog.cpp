@@ -1,4 +1,5 @@
 #include "registerdialog.h"
+#include "networkclient.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -7,18 +8,27 @@
 #include <QRegularExpression>
 #include <QCalendarWidget>
 #include <QDate>
+#include <QJsonObject>
 
 // ─────────────────────────────────────────────────────────────────────────────
 RegisterDialog::RegisterDialog(QWidget *parent)
     : QDialog(parent)
 {
-    m_existingIds << "admin" << "user01" << "test" << "hong123";
-
     setupUI();
     applyStyles();
     setWindowTitle(tr("회원가입"));
     setFixedSize(480, 590);
     setModal(true);
+
+    // 서버 응답을 이 다이얼로그에서 처리
+    connect(NetworkClient::instance(), &NetworkClient::responseReceived,
+            this, &RegisterDialog::onNetworkResponse);
+    connect(NetworkClient::instance(), &NetworkClient::errorOccurred,
+            this, [this](const QString& msg) {
+                QMessageBox::critical(this, tr("네트워크 오류"), msg);
+                m_confirmBtn->setEnabled(true);
+                m_dupCheckBtn->setEnabled(true);
+            });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -81,7 +91,7 @@ void RegisterDialog::setupUI()
         QCalendarWidget {
             background-color: #1e293b;
             color: #f1f5f9;
-            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
             font-size: 12px;
         }
         QCalendarWidget QToolButton {
@@ -233,13 +243,13 @@ void RegisterDialog::applyStyles()
             color: #f8fafc;
             font-size: 20px;
             font-weight: 700;
-            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
         }
         QLabel#fieldLabel {
             color: #cbd5e1;
             font-size: 12px;
             font-weight: 600;
-            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
         }
         QLineEdit#inputField {
             background-color: #0f172a;
@@ -248,7 +258,7 @@ void RegisterDialog::applyStyles()
             color: #f1f5f9;
             font-size: 13px;
             padding: 0 12px;
-            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
         }
         QLineEdit#inputField:focus {
             border: 1.5px solid #6366f1;
@@ -263,7 +273,7 @@ void RegisterDialog::applyStyles()
             color: #f1f5f9;
             font-size: 13px;
             padding: 0 12px;
-            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
         }
         QDateEdit#dateField:focus {
             border: 1.5px solid #6366f1;
@@ -295,7 +305,7 @@ void RegisterDialog::applyStyles()
             border-radius: 8px;
             font-size: 12px;
             font-weight: 600;
-            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
         }
         QPushButton#dupCheckBtn:hover  { background-color: #475569; color: #f1f5f9; }
         QPushButton#dupCheckBtn:pressed { background-color: #1e293b; }
@@ -308,7 +318,7 @@ void RegisterDialog::applyStyles()
             border-radius: 9px;
             font-size: 14px;
             font-weight: 700;
-            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
         }
         QPushButton#confirmBtn:hover  { background-color: #818cf8; }
         QPushButton#confirmBtn:pressed { background-color: #4f46e5; }
@@ -321,7 +331,7 @@ void RegisterDialog::applyStyles()
             border-radius: 9px;
             font-size: 14px;
             font-weight: 700;
-            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
         }
         QPushButton#cancelBtn:hover  { background-color: rgba(248,113,113,0.12); }
         QPushButton#cancelBtn:pressed { background-color: rgba(248,113,113,0.25); }
@@ -342,6 +352,11 @@ void RegisterDialog::setIdBorderColor(const QString &color)
                 color: #f1f5f9;
                 font-size: 13px;
                 padding: 0 12px;
+                font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+            }
+            QLineEdit:focus {
+                background-color: #1a2540;
+                border: 1.5px solid %1;
             }
         )").arg(color)
         );
@@ -364,22 +379,19 @@ void RegisterDialog::onDuplicateCheckClicked()
         QMessageBox::warning(this, tr("입력 오류"), tr("아이디를 먼저 입력해주세요."));
         return;
     }
-    if (id.length() < 4) {
-        QMessageBox::warning(this, tr("입력 오류"), tr("아이디는 4자 이상이어야 합니다."));
+    if (id.length() < 3) {
+        QMessageBox::warning(this, tr("입력 오류"), tr("아이디는 3자 이상이어야 합니다."));
         return;
     }
 
-    if (m_existingIds.contains(id)) {
-        m_idChecked = false;
-        setIdBorderColor("#f87171");
-        QMessageBox::warning(this, tr("중복 확인"),
-                             tr("'%1'은(는) 이미 사용 중인 아이디입니다.").arg(id));
-    } else {
-        m_idChecked = true;
-        setIdBorderColor("#10b981");
-        QMessageBox::information(this, tr("중복 확인"),
-                                 tr("'%1'은(는) 사용 가능한 아이디입니다.").arg(id));
-    }
+    // 서버에 중복 여부 확인 요청 (미연결 시 sendRequest 내부에서 자동 재연결 후 재전송)
+    m_dupCheckBtn->setEnabled(false);
+    QJsonObject data;
+    data["id"] = id;
+    QJsonObject req;
+    req["type"] = "check_id";
+    req["data"] = data;
+    NetworkClient::instance()->sendRequest(req);
 }
 
 bool RegisterDialog::validateInputs()
@@ -425,8 +437,49 @@ bool RegisterDialog::validateInputs()
 
 void RegisterDialog::onConfirmClicked()
 {
+    if (!validateInputs()) return;
 
-    accept();
+    // 서버에 회원가입 요청 전송
+    m_confirmBtn->setEnabled(false);
+    QJsonObject data;
+    data["id"]       = m_idEdit->text().trimmed();
+    data["password"] = m_pwEdit->text();
+    data["name"]     = m_nameEdit->text().trimmed();
+    QJsonObject req;
+    req["type"] = "register";
+    req["data"] = data;
+    NetworkClient::instance()->sendRequest(req);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  서버 응답 라우팅
+// ─────────────────────────────────────────────────────────────────────────────
+void RegisterDialog::onNetworkResponse(const QJsonObject& resp)
+{
+    const QString type   = resp["type"].toString();
+    const QString status = resp["status"].toString();
+    const QString msg    = resp["message"].toString();
+
+    if (type == "check_id_response") {
+        m_dupCheckBtn->setEnabled(true);
+        if (status == "success") {
+            m_idChecked = true;
+            setIdBorderColor("#10b981");
+            QMessageBox::information(this, tr("중복 확인"), msg);
+        } else {
+            m_idChecked = false;
+            setIdBorderColor("#f87171");
+            QMessageBox::warning(this, tr("중복 확인"), msg);
+        }
+    } else if (type == "register_response") {
+        m_confirmBtn->setEnabled(true);
+        if (status == "success") {
+            QMessageBox::information(this, tr("회원가입"), tr("회원가입이 완료되었습니다."));
+            accept();
+        } else {
+            QMessageBox::warning(this, tr("회원가입 실패"), msg);
+        }
+    }
 }
 
 void RegisterDialog::onCancelClicked()

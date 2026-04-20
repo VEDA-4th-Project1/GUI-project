@@ -35,6 +35,7 @@ public:
     explicit Bank(const QString& dataDir);
 
     // ── 요청 핸들러 (ClientHandler에서 호출) ───────────────────────
+    QJsonObject handleCheckId(const QJsonObject& data);                            // 아이디 중복 확인
     QJsonObject handleRegister(const QJsonObject& data);                          // 회원가입
     QJsonObject handleLogin(const QJsonObject& data);                             // 로그인
     QJsonObject handleLogout(const QString& token);                               // 로그아웃
