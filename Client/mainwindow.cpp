@@ -116,8 +116,8 @@ MainWindow::MainWindow(QWidget *parent)
     sideLayout->addSpacing(4);
     sideLayout->addWidget(btnHome);
     sideLayout->addWidget(btnNewAccount);
-    sideLayout->addWidget(btnMyInfo);
     sideLayout->addWidget(btnAccountProcess);
+    sideLayout->addWidget(btnMyInfo);
     sideLayout->addStretch();
     sideLayout->addWidget(btnLogout);
 
