@@ -55,7 +55,7 @@ MyInfoPage::MyInfoPage(QWidget *parent) : QWidget(parent)
 
 void MyInfoPage::setupUI()
 {
-    setStyleSheet("MyInfoPage { background-color: #F5F7FB; }");
+    setStyleSheet("background-color: #F5F7FB;");
 
     QVBoxLayout *root = new QVBoxLayout(this);
     root->setContentsMargins(40, 40, 40, 40);
@@ -200,6 +200,10 @@ void MyInfoPage::openChangePasswordDialog()
             QMessageBox::warning(dlg, "오류", "모든 항목을 입력해주세요.");
             return;
         }
+        if (newPwEdit->text().length() < 6) {
+            QMessageBox::warning(dlg, "오류", "새 비밀번호는 6자 이상이어야 합니다.");
+            return;
+        }
         if (newPwEdit->text() != confirmPwEdit->text()) {
             QMessageBox::warning(dlg, "오류", "새 비밀번호가 일치하지 않습니다.");
             return;
@@ -289,8 +293,12 @@ void MyInfoPage::openCloseAccountDialog()
             return;
         }
 
+        // "110-921-427450 (savings)" 에서 계좌번호만 파싱
+        QString selectedText = combo->currentText();
+        QString accountNumber = selectedText.left(selectedText.indexOf(" ("));
+
         auto reply = QMessageBox::question(dlg, "계좌 해지",
-                                           QString("계좌 [%1]을 정말 해지하시겠습니까?").arg(combo->currentText()),
+                                           QString("계좌 [%1]을 정말 해지하시겠습니까?").arg(accountNumber),
                                            QMessageBox::Yes | QMessageBox::No);
         if (reply != QMessageBox::Yes) return;
 
@@ -299,7 +307,7 @@ void MyInfoPage::openCloseAccountDialog()
         btnCancel->setEnabled(false);
 
         QJsonObject data;
-        data["accountNumber"]   = combo->currentText();
+        data["accountNumber"]   = accountNumber;
         data["accountPassword"] = pwEdit->text();
 
         QJsonObject request;
@@ -339,32 +347,28 @@ void MyInfoPage::onNetworkResponse(const QJsonObject &resp)
         if (status != "success") return;
         m_accountList.clear();
         const QJsonArray accounts = resp["data"].toObject()["accounts"].toArray();
-        for (const QJsonValue &v : accounts)
-            m_accountList << v.toObject()["accountNumber"].toString();
+        for (const QJsonValue &v : accounts) {
+            QJsonObject acc = v.toObject();
+            QString accNum  = acc["accountNumber"].toString();
+            QString accType = acc["type"].toString();
+            // 표시: "110-921-427450 (savings)" 형식
+            m_accountList << QString("%1 (%2)").arg(accNum, accType);
+        }
     }
 
     else if (type == "change_password_response") {
-        auto *box = new QMessageBox(
-            status == "success" ? QMessageBox::Information : QMessageBox::Critical,
-            status == "success" ? "완료" : "실패",
-            status == "success" ? "비밀번호가 변경되었습니다." : resp["message"].toString(),
-            QMessageBox::Ok, this);
-        box->setAttribute(Qt::WA_DeleteOnClose);
-        box->open();
+        if (status == "success")
+            QMessageBox::information(this, "완료", "비밀번호가 변경되었습니다.");
+        else
+            QMessageBox::critical(this, "실패", resp["message"].toString());
     }
 
     else if (type == "close_account_response") {
         if (status == "success") {
-            auto *box = new QMessageBox(QMessageBox::Information, "완료",
-                                        "계좌가 해지되었습니다.", QMessageBox::Ok, this);
-            box->setAttribute(Qt::WA_DeleteOnClose);
-            box->open();
-            loadUserInfo();
+            QMessageBox::information(this, "완료", "계좌가 해지되었습니다.");
+            loadUserInfo();  // 목록 새로고침 (계좌 제거 확인)
         } else {
-            auto *box = new QMessageBox(QMessageBox::Critical, "실패",
-                                        resp["message"].toString(), QMessageBox::Ok, this);
-            box->setAttribute(Qt::WA_DeleteOnClose);
-            box->open();
+            QMessageBox::critical(this, "실패", resp["message"].toString());
         }
     }
 }
