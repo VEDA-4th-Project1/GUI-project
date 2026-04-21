@@ -1,6 +1,7 @@
 #include "accountprocesspage.h"
 #include "networkclient.h"
 #include "sessioncontext.h"
+#include "appstyle.h"
 
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -68,29 +69,17 @@ AccountProcessPage::AccountProcessPage(QWidget *parent)
 
 void AccountProcessPage::setupUI()
 {
-    setStyleSheet("background-color: #F5F7FB;");
+    setStyleSheet(AppStyle::PAGE_BG);
 
     QHBoxLayout *mainLayout = new QHBoxLayout(this);
     mainLayout->setContentsMargins(30, 30, 30, 30);
     mainLayout->setSpacing(20);
 
     m_leftCard = new QFrame(this);
-    m_leftCard->setStyleSheet(
-        "QFrame {"
-        " background-color: white;"
-        " border: 1px solid #E5E7EB;"
-        " border-radius: 18px;"
-        "}"
-        );
+    m_leftCard->setStyleSheet(AppStyle::CARD_LARGE);
 
     m_rightCard = new QFrame(this);
-    m_rightCard->setStyleSheet(
-        "QFrame {"
-        " background-color: white;"
-        " border: 1px solid #E5E7EB;"
-        " border-radius: 18px;"
-        "}"
-        );
+    m_rightCard->setStyleSheet(AppStyle::CARD_LARGE);
 
     mainLayout->addWidget(m_leftCard, 11);
     mainLayout->addWidget(m_rightCard, 9);
@@ -115,40 +104,12 @@ void AccountProcessPage::setupLeftPanel()
     m_searchEdit = new QLineEdit(m_leftCard);
     m_searchEdit->setPlaceholderText("계좌번호로 검색");
     m_searchEdit->setFixedHeight(38);
-    m_searchEdit->setStyleSheet(
-        "QLineEdit {"
-        " background-color: #F9FAFB;"
-        " border: 1px solid #D1D5DB;"
-        " border-radius: 8px;"
-        " padding: 0 12px;"
-        " font-size: 13px;"
-        " color: #111827;"
-        "}"
-        "QLineEdit:focus {"
-        " border-color: #2563EB;"
-        " background-color: white;"
-        "}"
-        );
+    m_searchEdit->setStyleSheet(AppStyle::INPUT);
 
     m_searchResultList = new QListWidget(m_leftCard);
     m_searchResultList->setVisible(false);
     m_searchResultList->setMaximumHeight(120);
-    m_searchResultList->setStyleSheet(
-        "QListWidget {"
-        " background-color: white;"
-        " border: 1px solid #D1D5DB;"
-        " border-radius: 8px;"
-        " font-size: 13px;"
-        " color: #111827;"
-        "}"
-        "QListWidget::item {"
-        " padding: 8px;"
-        "}"
-        "QListWidget::item:selected {"
-        " background-color: #DBEAFE;"
-        " color: #111827;"
-        "}"
-        );
+    m_searchResultList->setStyleSheet(AppStyle::LIST);
 
     m_accountNumberLabel = new QLabel("계좌번호 : -", m_leftCard);
     m_accountNumberLabel->setStyleSheet(
@@ -176,7 +137,7 @@ void AccountProcessPage::setupLeftPanel()
     QScrollArea *scrollArea = new QScrollArea(m_leftCard);
     scrollArea->setWidgetResizable(true);
     scrollArea->setFrameShape(QFrame::NoFrame);
-    scrollArea->setStyleSheet("QScrollArea { background: transparent; border: none; }");
+    scrollArea->setStyleSheet(AppStyle::SCROLL_TRANSPARENT);
     scrollArea->viewport()->setStyleSheet("background: transparent;");
 
     m_historyContainer = new QWidget(scrollArea);
@@ -230,16 +191,7 @@ void AccountProcessPage::setupRightPanel()
 
     m_detailAccountCombo = new QComboBox(m_rightCard);
     m_detailAccountCombo->setFixedHeight(40);
-    m_detailAccountCombo->setStyleSheet(
-        "QComboBox {"
-        " background-color: #F9FAFB;"
-        " border: 1px solid #D1D5DB;"
-        " border-radius: 8px;"
-        " padding: 0 12px;"
-        " font-size: 13px;"
-        " color: #111827;"
-        "}"
-        );
+    m_detailAccountCombo->setStyleSheet(AppStyle::COMBO);
 
     QWidget *detailBox = new QWidget(m_rightCard);
     detailBox->setStyleSheet(
@@ -262,27 +214,8 @@ void AccountProcessPage::setupRightPanel()
     m_selectedTypeLabel = new QLabel("-", detailBox);
     m_selectedBalanceLabel = new QLabel("0원", detailBox);
 
-    const QString inputStyle =
-        "QLineEdit, QDoubleSpinBox {"
-        " background-color: #F9FAFB;"
-        " border: 1.5px solid #D1D5DB;"
-        " border-radius: 8px;"
-        " color: #111827;"
-        " font-size: 13px;"
-        " padding: 0 10px;"
-        "}"
-        "QLineEdit:focus, QDoubleSpinBox:focus {"
-        " border-color: #2563EB;"
-        " background-color: white;"
-        "}";
-
-    const QString radioStyle =
-        "QRadioButton {"
-        " color: #374151;"
-        " background: transparent;"
-        " font-size: 13px;"
-        "}"
-        "QRadioButton::indicator { width: 16px; height: 16px; }";
+    const QString &inputStyle  = AppStyle::INPUT;
+    const QString &radioStyle  = AppStyle::RADIO;
 
     m_accountPasswordEdit = new QLineEdit(detailBox);
     m_accountPasswordEdit->setEchoMode(QLineEdit::Password);
@@ -323,18 +256,7 @@ void AccountProcessPage::setupRightPanel()
 
     m_executeBtn = new QPushButton("실행", detailBox);
     m_executeBtn->setFixedHeight(42);
-    m_executeBtn->setStyleSheet(
-        "QPushButton {"
-        " background-color: #2563EB;"
-        " color: white;"
-        " border: none;"
-        " border-radius: 8px;"
-        " font-weight: 700;"
-        "}"
-        "QPushButton:hover {"
-        " background-color: #1D4ED8;"
-        "}"
-        );
+    m_executeBtn->setStyleSheet(AppStyle::BTN_BLUE);
 
     grid->addWidget(accTitle, 0, 0);
     grid->addWidget(m_selectedAccountLabel, 0, 1);

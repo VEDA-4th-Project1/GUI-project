@@ -8,8 +8,6 @@
 #include <QFrame>
 #include <QJsonObject>
 
-class MainWindow;
-
 class LoginDialog : public QDialog
 {
     Q_OBJECT
@@ -44,7 +42,6 @@ private:
     QPushButton *m_confirmBtn;
     QPushButton *m_cancelBtn;
 
-    MainWindow  *m_mainWindow;
 };
 
 #endif // LOGINDIALOG_H

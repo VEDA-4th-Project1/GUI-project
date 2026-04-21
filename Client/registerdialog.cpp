@@ -1,5 +1,6 @@
 #include "registerdialog.h"
 #include "networkclient.h"
+#include "appstyle.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -231,39 +232,15 @@ void RegisterDialog::setupUI()
 // ─────────────────────────────────────────────────────────────────────────────
 void RegisterDialog::applyStyles()
 {
-    setStyleSheet("QDialog { background-color: #0f172a; }");
+    setStyleSheet(AppStyle::DARK_DIALOG_BG);
 
-    m_card->setStyleSheet(R"(
-        #regCard {
-            background-color: #1e293b;
-            border-radius: 18px;
-            border: 1px solid #334155;
-        }
-        #titleLabel {
-            color: #f8fafc;
-            font-size: 20px;
-            font-weight: 700;
-            font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
-        }
-        QLabel#fieldLabel {
-            color: #cbd5e1;
-            font-size: 12px;
-            font-weight: 600;
-            font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
-        }
-        QLineEdit#inputField {
-            background-color: #0f172a;
-            border: 1.5px solid #334155;
-            border-radius: 8px;
-            color: #f1f5f9;
-            font-size: 13px;
-            padding: 0 12px;
-            font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
-        }
-        QLineEdit#inputField:focus {
-            border: 1.5px solid #6366f1;
-            background-color: #1a2540;
-        }
+    m_card->setStyleSheet(
+        "#regCard { " + AppStyle::DARK_CARD_BODY + " }"
+        "#titleLabel { color: #f8fafc; font-size: 20px; font-weight: 700;"
+        "  font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; }"
+        + AppStyle::DARK_FIELD_LABEL
+        + AppStyle::DARK_INPUT
+        + R"(
 
         /* ── QDateEdit 달력 버튼 ── */
         QDateEdit#dateField {

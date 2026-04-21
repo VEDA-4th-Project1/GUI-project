@@ -1,6 +1,7 @@
 #include "homepage.h"
 #include "networkclient.h"
 #include "sessioncontext.h"
+#include "appstyle.h"
 
 #include <QVBoxLayout>
 #include <QLabel>
@@ -9,31 +10,23 @@
 #include <QJsonObject>
 #include <QJsonArray>
 
-HomePage::HomePage(const QString &userName, QWidget *parent)
-    : QWidget(parent), m_userName(userName)
+HomePage::HomePage(QWidget *parent)
+    : QWidget(parent)
 {
-    setStyleSheet(
-        "background-color: #F5F7FB;"
-        "QLabel { color: #111827; background: transparent; border: none; }"
-        );
+    setStyleSheet(AppStyle::PAGE_BG_LABEL);
 
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->setContentsMargins(40, 40, 40, 40);
     layout->setSpacing(20);
 
     QFrame *card = new QFrame(this);
-    card->setStyleSheet(
-        "QFrame {"
-        " background-color: white;"
-        " border-radius: 20px;"
-        " border: 1px solid #E5E7EB;"
-        "}"
-        );
+    card->setStyleSheet(AppStyle::CARD);
 
     QVBoxLayout *cardLayout = new QVBoxLayout(card);
     cardLayout->setContentsMargins(30, 30, 30, 30);
     cardLayout->setSpacing(16);
 
+    const QString userName = SessionContext::instance().userName();
     m_labelWelcome = new QLabel(QString("%1님 환영합니다").arg(userName), card);
     m_labelWelcome->setStyleSheet(
         "font-size: 28px;"

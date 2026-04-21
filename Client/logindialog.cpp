@@ -3,6 +3,7 @@
 #include "mainwindow.h"
 #include "networkclient.h"
 #include "sessioncontext.h"
+#include "appstyle.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -11,7 +12,7 @@
 #include <QJsonObject>
 
 LoginDialog::LoginDialog(QWidget *parent)
-    : QDialog(parent), m_mainWindow(nullptr)
+    : QDialog(parent)
 {
     setupUI();
     applyStyles();
@@ -125,45 +126,16 @@ void LoginDialog::setupUI()
 
 void LoginDialog::applyStyles()
 {
-    setStyleSheet(R"(
-        QDialog {
-            background-color: #0f172a;
-            font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
-        }
-    )");
+    setStyleSheet(AppStyle::DARK_DIALOG_BG);
 
-    m_loginCard->setStyleSheet(R"(
-        #loginCard {
-            background-color: #1e293b;
-            border-radius: 18px;
-            border: 1px solid #334155;
-        }
-        #titleLabel {
-            color: #f8fafc;
-            font-size: 24px;
-            font-weight: 700;
-        }
-        #subtitleLabel {
-            color: #94a3b8;
-            font-size: 13px;
-        }
-        QFrame#divider {
-            color: #334155;
-        }
-        QLabel#fieldLabel {
-            color: #cbd5e1;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        QLineEdit#inputField {
-            background-color: #0f172a;
-            border: 1.5px solid #334155;
-            border-radius: 9px;
-            color: #f1f5f9;
-            font-size: 13px;
-            padding: 0 12px;
-        }
-    )");
+    m_loginCard->setStyleSheet(
+        "#loginCard { " + AppStyle::DARK_CARD_BODY + " }"
+        "#titleLabel { color: #f8fafc; font-size: 24px; font-weight: 700; }"
+        "#subtitleLabel { color: #94a3b8; font-size: 13px; }"
+        "QFrame#divider { color: #334155; }"
+        + AppStyle::DARK_FIELD_LABEL
+        + AppStyle::DARK_INPUT
+    );
 }
 
 void LoginDialog::onRegisterClicked()
@@ -215,8 +187,8 @@ void LoginDialog::onNetworkResponse(const QJsonObject& resp)
             user["name"].toString()
         );
 
-        m_mainWindow = new MainWindow();
-        m_mainWindow->show();
+        MainWindow *mainWindow = new MainWindow();
+        mainWindow->show();
         accept();
     } else {
         QMessageBox::warning(this, tr("로그인 실패"), resp["message"].toString());

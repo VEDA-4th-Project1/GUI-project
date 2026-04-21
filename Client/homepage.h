@@ -11,7 +11,7 @@ class HomePage : public QWidget
     Q_OBJECT
 
 public:
-    explicit HomePage(const QString &userName, QWidget *parent = nullptr);
+    explicit HomePage(QWidget *parent = nullptr);
 
 protected:
     void showEvent(QShowEvent *event) override;
@@ -22,7 +22,6 @@ private slots:
 private:
     void loadTotalBalance();
 
-    QString m_userName;
     QLabel *m_labelWelcome;
     QLabel *m_labelMoney;
 };
