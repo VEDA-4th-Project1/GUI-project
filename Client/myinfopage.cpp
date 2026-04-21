@@ -198,6 +198,10 @@ void MyInfoPage::onChangePwOkClicked()
         showMsg(m_changePwDlg, QMessageBox::Warning, "오류", "새 비밀번호가 일치하지 않습니다.");
         return;
     }
+    if (m_currentPwEdit->text() == m_newPwEdit->text()){
+        showMsg(m_changePwDlg, QMessageBox::Warning, "오류", "현재 비밀번호와 새 비밀번호가 같습니다.");
+        return;
+    }
 
     QJsonObject data;
     data["currentPassword"] = m_currentPwEdit->text();
