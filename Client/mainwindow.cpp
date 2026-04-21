@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "appstyle.h"
 #include "sessioncontext.h"
 #include "homepage.h"
 #include "newaccountpage.h"
@@ -19,13 +20,13 @@
 #include <QJsonObject>
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), userName(SessionContext::instance().userName())
+    : QMainWindow(parent)
 {
     QWidget *central = new QWidget(this);
     setCentralWidget(central);
     resize(1100, 700);
 
-    central->setStyleSheet("background-color: #F5F7FB;");
+    central->setStyleSheet(AppStyle::PAGE_BG);
 
     QHBoxLayout *mainLayout = new QHBoxLayout(central);
     mainLayout->setContentsMargins(0, 0, 0, 0);
@@ -50,7 +51,7 @@ MainWindow::MainWindow(QWidget *parent)
         "font-weight: bold;"
         );
 
-    QLabel *userLabel = new QLabel(QString("%1님\n환영합니다").arg(userName));
+    QLabel *userLabel = new QLabel(QString("%1님\n환영합니다").arg(SessionContext::instance().userName()));
     userLabel->setStyleSheet(
         "color: #D1D5DB;"
         "font-size: 14px;"
@@ -72,41 +73,14 @@ MainWindow::MainWindow(QWidget *parent)
     for (int i = 0; i < menuButtons.size(); i++) {
         menuButtons[i]->setMinimumHeight(48);
         menuButtons[i]->setCursor(Qt::PointingHandCursor);
-        menuButtons[i]->setStyleSheet(
-            "QPushButton {"
-            "   background-color: transparent;"
-            "   color: #E5E7EB;"
-            "   text-align: left;"
-            "   padding: 12px 16px;"
-            "   border: none;"
-            "   border-radius: 12px;"
-            "   font-size: 15px;"
-            "   font-weight: 600;"
-            "}"
-            "QPushButton:hover {"
-            "   background-color: #1F2937;"
-            "   color: white;"
-            "}"
-            );
+        menuButtons[i]->setStyleSheet(AppStyle::SIDEBAR_BTN);
     }
 
     // 로그아웃 버튼 (팀원2 추가)
     btnLogout = new QPushButton("로그아웃");
     btnLogout->setCursor(Qt::PointingHandCursor);
     btnLogout->setMinimumHeight(35);
-    btnLogout->setStyleSheet(
-        "QPushButton {"
-        "   background-color: #EF4444;"
-        "   color: white;"
-        "   border-radius: 8px;"
-        "   font-size: 13px;"
-        "   font-weight: bold;"
-        "   margin: 5px 0px;"
-        "}"
-        "QPushButton:hover {"
-        "   background-color: #DC2626;"
-        "}"
-        );
+    btnLogout->setStyleSheet(AppStyle::BTN_RED);
 
     sideLayout->addWidget(logoLabel);
     sideLayout->addWidget(userLabel);
@@ -130,7 +104,7 @@ MainWindow::MainWindow(QWidget *parent)
         );
 
     // 홈 화면
-    pageHome = new HomePage(userName, this);
+    pageHome = new HomePage(this);
 
     // 신규계좌 관리 화면
     pageNewAccount = new NewAccountPage(this);
@@ -169,37 +143,10 @@ void MainWindow::updateMenuStyle(QPushButton *selectedButton)
     menuButtons << btnHome << btnNewAccount << btnMyInfo << btnAccountProcess;
 
     for (int i = 0; i < menuButtons.size(); i++) {
-        if (menuButtons[i] == selectedButton) {
-            menuButtons[i]->setStyleSheet(
-                "QPushButton {"
-                "   background-color: #2563EB;"
-                "   color: white;"
-                "   text-align: left;"
-                "   padding: 12px 16px;"
-                "   border: none;"
-                "   border-radius: 12px;"
-                "   font-size: 15px;"
-                "   font-weight: 700;"
-                "}"
-                );
-        } else {
-            menuButtons[i]->setStyleSheet(
-                "QPushButton {"
-                "   background-color: transparent;"
-                "   color: #E5E7EB;"
-                "   text-align: left;"
-                "   padding: 12px 16px;"
-                "   border: none;"
-                "   border-radius: 12px;"
-                "   font-size: 15px;"
-                "   font-weight: 600;"
-                "}"
-                "QPushButton:hover {"
-                "   background-color: #1F2937;"
-                "   color: white;"
-                "}"
-                );
-        }
+        if (menuButtons[i] == selectedButton)
+            menuButtons[i]->setStyleSheet(AppStyle::SIDEBAR_BTN_ACTIVE);
+        else
+            menuButtons[i]->setStyleSheet(AppStyle::SIDEBAR_BTN);
     }
 }
 

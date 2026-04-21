@@ -1,6 +1,7 @@
 #include "myinfopage.h"
 #include "networkclient.h"
 #include "sessioncontext.h"
+#include "appstyle.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -15,52 +16,13 @@
 #include <QJsonObject>
 #include <QDateTime>
 
-static const QString S_INPUT =
-    "QLineEdit {"
-    "  background-color: #F9FAFB; border: 1.5px solid #D1D5DB;"
-    "  border-radius: 8px; color: #111827; font-size: 13px; padding: 0 12px;"
-    "}"
-    "QLineEdit:focus { border-color: #2563EB; background-color: white; }";
-
-static const QString S_COMBO =
-    "QComboBox {"
-    "  background-color: #F9FAFB; border: 1.5px solid #D1D5DB;"
-    "  border-radius: 8px; color: #111827; font-size: 13px; padding: 0 12px;"
-    "}"
-    "QComboBox::drop-down { border: none; width: 28px; }"
-    "QComboBox QAbstractItemView { background-color: white; color: #111827; }";
-
-static const QString S_BTN_BLUE =
-    "QPushButton { background-color: #2563EB; color: white; border: none;"
-    " border-radius: 8px; font-size: 13px; font-weight: bold; }"
-    "QPushButton:hover { background-color: #1D4ED8; }";
-
-static const QString S_BTN_RED =
-    "QPushButton { background-color: #EF4444; color: white; border: none;"
-    " border-radius: 8px; font-size: 13px; font-weight: bold; }"
-    "QPushButton:hover { background-color: #DC2626; }";
-
-static const QString S_BTN_GRAY =
-    "QPushButton { background-color: #6B7280; color: white; border: none;"
-    " border-radius: 8px; font-size: 13px; font-weight: bold; }"
-    "QPushButton:hover { background-color: #4B5563; }";
-
-static const QString S_MSGBOX =
-    "QMessageBox { background-color: white; }"
-    "QMessageBox QLabel { color: #111827; font-size: 14px; background-color: transparent; }"
-    "QMessageBox QPushButton {"
-    "  background-color: #2563EB; color: white; border: none;"
-    "  border-radius: 6px; padding: 6px 18px; font-size: 13px; font-weight: bold;"
-    "  min-width: 70px;"
-    "}"
-    "QMessageBox QPushButton:hover { background-color: #1D4ED8; }";
 
 static int showMsg(QWidget *parent, QMessageBox::Icon icon,
                    const QString &title, const QString &text,
                    QMessageBox::StandardButtons btns = QMessageBox::Ok)
 {
     QMessageBox box(icon, title, text, btns, parent);
-    box.setStyleSheet(S_MSGBOX);
+    box.setStyleSheet(AppStyle::MSGBOX);
     return box.exec();
 }
 
@@ -90,7 +52,7 @@ void MyInfoPage::setupUI()
     cardLayout->setSpacing(14);
 
     QLabel *title = new QLabel("내 정보");
-    title->setStyleSheet("font-size: 20px; font-weight: 700; color: #111827; border: none;");
+    title->setStyleSheet(AppStyle::LABEL_TITLE);
     cardLayout->addWidget(title);
 
     auto makeDivider = [&]() -> QFrame* {
@@ -127,8 +89,8 @@ void MyInfoPage::setupUI()
     btnCloseAcc->setFixedHeight(44);
     btnChangePw->setCursor(Qt::PointingHandCursor);
     btnCloseAcc->setCursor(Qt::PointingHandCursor);
-    btnChangePw->setStyleSheet(S_BTN_BLUE);
-    btnCloseAcc->setStyleSheet(S_BTN_RED);
+    btnChangePw->setStyleSheet(AppStyle::BTN_BLUE);
+    btnCloseAcc->setStyleSheet(AppStyle::BTN_RED);
 
     QHBoxLayout *btnRow = new QHBoxLayout;
     btnRow->setSpacing(12);
@@ -184,11 +146,11 @@ void MyInfoPage::openChangePasswordDialog()
 
     auto addField = [&](const QString &labelText, QLineEdit *&edit) {
         QLabel *lbl = new QLabel(labelText);
-        lbl->setStyleSheet("font-size: 12px; font-weight: 600; color: #6B7280;");
+        lbl->setStyleSheet(AppStyle::LABEL_MUTED);
         edit = new QLineEdit;
         edit->setEchoMode(QLineEdit::Password);
         edit->setFixedHeight(40);
-        edit->setStyleSheet(S_INPUT);
+        edit->setStyleSheet(AppStyle::INPUT);
         layout->addWidget(lbl);
         layout->addWidget(edit);
     };
@@ -205,8 +167,8 @@ void MyInfoPage::openChangePasswordDialog()
     btnCancel->setFixedHeight(42);
     btnOk->setCursor(Qt::PointingHandCursor);
     btnCancel->setCursor(Qt::PointingHandCursor);
-    btnOk->setStyleSheet(S_BTN_BLUE);
-    btnCancel->setStyleSheet(S_BTN_GRAY);
+    btnOk->setStyleSheet(AppStyle::BTN_BLUE);
+    btnCancel->setStyleSheet(AppStyle::BTN_GRAY);
 
     QHBoxLayout *btnRow = new QHBoxLayout;
     btnRow->setSpacing(10);
@@ -270,19 +232,19 @@ void MyInfoPage::openCloseAccountDialog()
     layout->addSpacing(8);
 
     QLabel *accLabel = new QLabel("해지할 계좌 선택");
-    accLabel->setStyleSheet("font-size: 12px; font-weight: 600; color: #6B7280;");
+    accLabel->setStyleSheet(AppStyle::LABEL_MUTED);
     QComboBox *combo = new QComboBox;
     combo->setFixedHeight(40);
     combo->addItems(m_accountList);
-    combo->setStyleSheet(S_COMBO);
+    combo->setStyleSheet(AppStyle::COMBO);
 
     QLabel *pwLabel = new QLabel("계좌 비밀번호");
-    pwLabel->setStyleSheet("font-size: 12px; font-weight: 600; color: #6B7280;");
+    pwLabel->setStyleSheet(AppStyle::LABEL_MUTED);
     QLineEdit *pwEdit = new QLineEdit;
     pwEdit->setEchoMode(QLineEdit::Password);
     pwEdit->setPlaceholderText("계좌 비밀번호를 입력하세요");
     pwEdit->setFixedHeight(40);
-    pwEdit->setStyleSheet(S_INPUT);
+    pwEdit->setStyleSheet(AppStyle::INPUT);
 
     layout->addWidget(accLabel);
     layout->addWidget(combo);
@@ -296,8 +258,8 @@ void MyInfoPage::openCloseAccountDialog()
     btnCancel->setFixedHeight(42);
     btnOk->setCursor(Qt::PointingHandCursor);
     btnCancel->setCursor(Qt::PointingHandCursor);
-    btnOk->setStyleSheet(S_BTN_RED);
-    btnCancel->setStyleSheet(S_BTN_GRAY);
+    btnOk->setStyleSheet(AppStyle::BTN_RED);
+    btnCancel->setStyleSheet(AppStyle::BTN_GRAY);
 
     QHBoxLayout *btnRow = new QHBoxLayout;
     btnRow->setSpacing(10);

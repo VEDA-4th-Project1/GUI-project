@@ -27,8 +27,6 @@ private slots:
     void onLogoutClicked();
 
 private:
-    QString userName;
-
     QStackedWidget *stackedWidget;
 
     HomePage *pageHome;

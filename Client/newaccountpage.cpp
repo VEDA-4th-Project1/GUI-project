@@ -1,6 +1,7 @@
 #include "newaccountpage.h"
 #include "networkclient.h"
 #include "sessioncontext.h"
+#include "appstyle.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -20,10 +21,7 @@ NewAccountPage::NewAccountPage(QWidget* parent) : QWidget(parent) {
 }
 
 void NewAccountPage::setupUI() {
-    setStyleSheet(
-        "background-color: #F5F7FB;"
-        "QLabel { color: #111827; background: transparent; border: none; }"
-    );
+    setStyleSheet(AppStyle::PAGE_BG_LABEL);
 
     QVBoxLayout* root = new QVBoxLayout(this);
     root->setContentsMargins(40, 40, 40, 40);
@@ -32,8 +30,7 @@ void NewAccountPage::setupUI() {
 
     // ── 계좌 개설 카드 ────────────────────────────────────────────────────────
     QFrame* card = new QFrame(this);
-    card->setStyleSheet(
-        "QFrame { background-color: white; border-radius: 16px; border: 1px solid #E5E7EB; }");
+    card->setStyleSheet(AppStyle::CARD);
     card->setMaximumWidth(560);
 
     QVBoxLayout* cl = new QVBoxLayout(card);
@@ -41,22 +38,13 @@ void NewAccountPage::setupUI() {
     cl->setSpacing(16);
 
     QLabel* title = new QLabel("신규 계좌 개설", card);
-    title->setStyleSheet(
-        "font-size: 20px; font-weight: 700; color: #111827; border: none;");
+    title->setStyleSheet(AppStyle::LABEL_TITLE);
     cl->addWidget(title);
     cl->addSpacing(4);
 
-    const QString inputStyle =
-        "QLineEdit, QDoubleSpinBox, QComboBox {"
-        "  background-color: #F9FAFB; border: 1.5px solid #D1D5DB;"
-        "  border-radius: 8px; color: #111827; font-size: 13px; padding: 0 12px; }"
-        "QLineEdit:focus, QDoubleSpinBox:focus, QComboBox:focus {"
-        "  border-color: #2563EB; background-color: white; }";
-    const QString labelStyle =
-        "color: #374151; font-size: 13px; font-weight: 600; border: none; min-width: 120px;";
-    const QString fixedValStyle =
-        "color: #6B7280; font-size: 13px; border: 1.5px solid #E5E7EB;"
-        "border-radius: 8px; background-color: #F3F4F6; padding: 0 12px;";
+    const QString &inputStyle    = AppStyle::INPUT_ALL;
+    const QString &labelStyle    = AppStyle::LABEL_FIELD;
+    const QString &fixedValStyle = AppStyle::FIXED_VAL;
 
     auto addRow = [&](const QString& labelText, QWidget* field) {
         QHBoxLayout* row = new QHBoxLayout();
@@ -129,12 +117,7 @@ void NewAccountPage::setupUI() {
     m_createBtn = new QPushButton("계좌 개설", card);
     m_createBtn->setFixedHeight(46);
     m_createBtn->setCursor(Qt::PointingHandCursor);
-    m_createBtn->setStyleSheet(
-        "QPushButton { background-color: #2563EB; color: white; border: none;"
-        "  border-radius: 10px; font-size: 14px; font-weight: 700; }"
-        "QPushButton:hover    { background-color: #1D4ED8; }"
-        "QPushButton:pressed  { background-color: #1E40AF; }"
-        "QPushButton:disabled { background-color: #93C5FD; }");
+    m_createBtn->setStyleSheet(AppStyle::BTN_BLUE);
     cl->addWidget(m_createBtn);
 
     // 카드를 가운데 정렬
