@@ -18,19 +18,32 @@
 #include <QShowEvent>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QLayoutItem>
+#include <QListWidget>
+#include <QListWidgetItem>
+
+static void showBox(QWidget *parent, QMessageBox::Icon icon,
+                    const QString &title, const QString &text)
+{
+    QMessageBox *box = new QMessageBox(icon, title, text, QMessageBox::Ok, parent);
+    box->setAttribute(Qt::WA_DeleteOnClose);
+    box->open();
+}
 
 AccountProcessPage::AccountProcessPage(QWidget *parent)
     : QWidget(parent),
     m_leftCard(nullptr),
     m_rightCard(nullptr),
     m_titleLabel(nullptr),
-    m_accountCombo(nullptr),
+    m_searchEdit(nullptr),
+    m_searchResultList(nullptr),
     m_accountNumberLabel(nullptr),
     m_balanceLabel(nullptr),
     m_historyContainer(nullptr),
     m_historyLayout(nullptr),
     m_totalLabel(nullptr),
     m_detailTitleLabel(nullptr),
+    m_detailAccountCombo(nullptr),
     m_selectedAccountLabel(nullptr),
     m_selectedTypeLabel(nullptr),
     m_selectedBalanceLabel(nullptr),
@@ -40,7 +53,8 @@ AccountProcessPage::AccountProcessPage(QWidget *parent)
     m_amountSpin(nullptr),
     m_descriptionEdit(nullptr),
     m_executeBtn(nullptr),
-    m_currentBalance(0),
+    m_leftBalance(0),
+    m_rightBalance(0),
     m_historyCount(0)
 {
     setupUI();
@@ -98,10 +112,11 @@ void AccountProcessPage::setupLeftPanel()
         "color: #111827;"
         );
 
-    m_accountCombo = new QComboBox(m_leftCard);
-    m_accountCombo->setFixedHeight(40);
-    m_accountCombo->setStyleSheet(
-        "QComboBox {"
+    m_searchEdit = new QLineEdit(m_leftCard);
+    m_searchEdit->setPlaceholderText("계좌번호로 검색");
+    m_searchEdit->setFixedHeight(38);
+    m_searchEdit->setStyleSheet(
+        "QLineEdit {"
         " background-color: #F9FAFB;"
         " border: 1px solid #D1D5DB;"
         " border-radius: 8px;"
@@ -109,11 +124,29 @@ void AccountProcessPage::setupLeftPanel()
         " font-size: 13px;"
         " color: #111827;"
         "}"
-        "QComboBox QAbstractItemView {"
+        "QLineEdit:focus {"
+        " border-color: #2563EB;"
         " background-color: white;"
+        "}"
+        );
+
+    m_searchResultList = new QListWidget(m_leftCard);
+    m_searchResultList->setVisible(false);
+    m_searchResultList->setMaximumHeight(120);
+    m_searchResultList->setStyleSheet(
+        "QListWidget {"
+        " background-color: white;"
+        " border: 1px solid #D1D5DB;"
+        " border-radius: 8px;"
+        " font-size: 13px;"
         " color: #111827;"
-        " selection-background-color: #EFF6FF;"
-        " selection-color: #2563EB;"
+        "}"
+        "QListWidget::item {"
+        " padding: 8px;"
+        "}"
+        "QListWidget::item:selected {"
+        " background-color: #DBEAFE;"
+        " color: #111827;"
         "}"
         );
 
@@ -148,6 +181,7 @@ void AccountProcessPage::setupLeftPanel()
 
     m_historyContainer = new QWidget(scrollArea);
     m_historyContainer->setStyleSheet("background: transparent;");
+
     m_historyLayout = new QVBoxLayout(m_historyContainer);
     m_historyLayout->setContentsMargins(0, 0, 0, 0);
     m_historyLayout->setSpacing(8);
@@ -165,7 +199,8 @@ void AccountProcessPage::setupLeftPanel()
         );
 
     leftLayout->addWidget(m_titleLabel);
-    leftLayout->addWidget(m_accountCombo);
+    leftLayout->addWidget(m_searchEdit);
+    leftLayout->addWidget(m_searchResultList);
     leftLayout->addWidget(m_accountNumberLabel);
     leftLayout->addWidget(m_balanceLabel);
     leftLayout->addSpacing(10);
@@ -173,8 +208,11 @@ void AccountProcessPage::setupLeftPanel()
     leftLayout->addWidget(scrollArea, 1);
     leftLayout->addWidget(m_totalLabel);
 
-    connect(m_accountCombo, SIGNAL(currentIndexChanged(int)),
-            this, SLOT(onAccountChanged(int)));
+    connect(m_searchEdit, SIGNAL(textChanged(QString)),
+            this, SLOT(onSearchTextChanged(QString)));
+
+    connect(m_searchResultList, SIGNAL(itemClicked(QListWidgetItem*)),
+            this, SLOT(onSearchResultClicked(QListWidgetItem*)));
 }
 
 void AccountProcessPage::setupRightPanel()
@@ -190,8 +228,25 @@ void AccountProcessPage::setupRightPanel()
         "color: #111827;"
         );
 
+    m_detailAccountCombo = new QComboBox(m_rightCard);
+    m_detailAccountCombo->setFixedHeight(40);
+    m_detailAccountCombo->setStyleSheet(
+        "QComboBox {"
+        " background-color: #F9FAFB;"
+        " border: 1px solid #D1D5DB;"
+        " border-radius: 8px;"
+        " padding: 0 12px;"
+        " font-size: 13px;"
+        " color: #111827;"
+        "}"
+        );
+
     QWidget *detailBox = new QWidget(m_rightCard);
-    detailBox->setStyleSheet("QWidget { background: transparent; } QLabel { color: #374151; background: transparent; }");
+    detailBox->setStyleSheet(
+        "QWidget { background: transparent; }"
+        "QLabel { color: #374151; background: transparent; }"
+        );
+
     QGridLayout *grid = new QGridLayout(detailBox);
     grid->setHorizontalSpacing(12);
     grid->setVerticalSpacing(12);
@@ -209,12 +264,24 @@ void AccountProcessPage::setupRightPanel()
 
     const QString inputStyle =
         "QLineEdit, QDoubleSpinBox {"
-        " background-color: #F9FAFB; border: 1.5px solid #D1D5DB;"
-        " border-radius: 8px; color: #111827; font-size: 13px; padding: 0 10px; }"
+        " background-color: #F9FAFB;"
+        " border: 1.5px solid #D1D5DB;"
+        " border-radius: 8px;"
+        " color: #111827;"
+        " font-size: 13px;"
+        " padding: 0 10px;"
+        "}"
         "QLineEdit:focus, QDoubleSpinBox:focus {"
-        " border-color: #2563EB; background-color: white; }";
+        " border-color: #2563EB;"
+        " background-color: white;"
+        "}";
+
     const QString radioStyle =
-        "QRadioButton { color: #374151; background: transparent; font-size: 13px; }"
+        "QRadioButton {"
+        " color: #374151;"
+        " background: transparent;"
+        " font-size: 13px;"
+        "}"
         "QRadioButton::indicator { width: 16px; height: 16px; }";
 
     m_accountPasswordEdit = new QLineEdit(detailBox);
@@ -293,16 +360,30 @@ void AccountProcessPage::setupRightPanel()
     grid->addWidget(m_executeBtn, 7, 0, 1, 2);
 
     rightLayout->addWidget(m_detailTitleLabel);
+    rightLayout->addWidget(m_detailAccountCombo);
     rightLayout->addWidget(detailBox);
     rightLayout->addStretch();
 
+    connect(m_detailAccountCombo, SIGNAL(currentIndexChanged(int)),
+            this, SLOT(onDetailAccountChanged(int)));
     connect(m_executeBtn, SIGNAL(clicked()),
             this, SLOT(onExecuteClicked()));
+    connect(m_withdrawRadio, SIGNAL(clicked(bool)),
+            this, SLOT(onWithdrawRadioClicked(bool)));
+
+    connect(m_accountPasswordEdit, &QLineEdit::returnPressed, this, [this]() {
+        if (!m_rightAccountNumber.isEmpty()) {
+            QString pw = m_accountPasswordEdit->text().trimmed();
+            if (!pw.isEmpty()) {
+                loadAccountDetail(m_rightAccountNumber, pw);
+            }
+        }
+    });
 }
 
 void AccountProcessPage::showEvent(QShowEvent *event)
 {
-    QWidget::showEvent(event);  // 페이지가 표시될 때마다 계좌 목록 갱신
+    QWidget::showEvent(event);
     loadAccounts();
 }
 
@@ -316,41 +397,69 @@ void AccountProcessPage::loadAccounts()
     NetworkClient::instance()->sendRequest(request);
 }
 
-void AccountProcessPage::onAccountChanged(int index)
+void AccountProcessPage::updateLeftSummary(const QJsonObject &acc)
+{
+    m_leftAccountNumber = acc["accountNumber"].toString();
+    m_leftBalance = static_cast<int>(acc["balance"].toDouble());
+
+    m_accountNumberLabel->setText(QString("계좌번호 : %1").arg(m_leftAccountNumber));
+    m_balanceLabel->setText(QString("잔액 : %1원").arg(m_leftBalance));
+}
+
+void AccountProcessPage::updateRightSummary(const QJsonObject &acc)
+{
+    m_rightAccountNumber = acc["accountNumber"].toString();
+    m_rightAccountType = acc["type"].toString();
+    m_rightBalance = static_cast<int>(acc["balance"].toDouble());
+
+    m_selectedAccountLabel->setText(m_rightAccountNumber);
+    m_selectedTypeLabel->setText(m_rightAccountType);
+    m_selectedBalanceLabel->setText(QString("%1원").arg(m_rightBalance));
+
+    if (m_rightAccountType == "savings") {
+        m_withdrawRadio->setEnabled(false);
+        m_depositRadio->setChecked(true);
+    } else {
+        m_withdrawRadio->setEnabled(true);
+    }
+}
+
+void AccountProcessPage::onDetailAccountChanged(int index)
 {
     if (index < 0 || index >= m_allAccounts.size())
         return;
 
     QJsonObject acc = m_allAccounts[index].toObject();
+    updateRightSummary(acc);
 
-    m_currentAccountNumber = acc["accountNumber"].toString();
-    m_currentAccountType = acc["type"].toString();
-    m_currentBalance = static_cast<int>(acc["balance"].toDouble());
-
-    m_accountNumberLabel->setText(QString("계좌번호 : %1").arg(m_currentAccountNumber));
-    m_balanceLabel->setText(QString("잔액 : %1원").arg(m_currentBalance));
-
-    m_selectedAccountLabel->setText(m_currentAccountNumber);
-    m_selectedTypeLabel->setText(m_currentAccountType);
-    m_selectedBalanceLabel->setText(QString("%1원").arg(m_currentBalance));
-
-    clearHistoryLabels();
-    updateTotalLabel();
-
-    if (!m_accountPasswordEdit->text().trimmed().isEmpty()) {
-        loadAccountDetail(m_currentAccountNumber);
+    QString pw = m_accountPasswordEdit->text().trimmed();
+    if (!pw.isEmpty()) {
+        loadAccountDetail(m_rightAccountNumber, pw);
     }
 }
 
-void AccountProcessPage::loadAccountDetail(const QString &accountNumber)
+void AccountProcessPage::onWithdrawRadioClicked(bool checked)
 {
-    QString password = m_accountPasswordEdit->text().trimmed();
-    if (password.isEmpty())
+    if (!checked)
+        return;
+
+    if (m_rightAccountType == "savings") {
+        showBox(this, QMessageBox::Warning,
+                "출금 불가",
+                "저축계좌(savings)는 출금할 수 없습니다.");
+        m_depositRadio->setChecked(true);
+    }
+}
+
+void AccountProcessPage::loadAccountDetail(const QString &accountNumber, const QString &password)
+{
+    QString pw = password.trimmed();
+    if (pw.isEmpty())
         return;
 
     QJsonObject data;
     data["accountNumber"] = accountNumber;
-    data["accountPassword"] = password;
+    data["accountPassword"] = pw;
 
     QJsonObject request;
     request["type"] = "get_account_detail";
@@ -360,9 +469,24 @@ void AccountProcessPage::loadAccountDetail(const QString &accountNumber)
     NetworkClient::instance()->sendRequest(request);
 }
 
+void AccountProcessPage::tryLoadLeftAccountDetail()
+{
+    if (m_leftAccountNumber.isEmpty())
+        return;
+
+    if (m_accountPasswordCache.contains(m_leftAccountNumber)) {
+        loadAccountDetail(m_leftAccountNumber,
+                          m_accountPasswordCache.value(m_leftAccountNumber));
+    } else {
+        m_currentTransactions = QJsonArray();
+        clearHistoryLabels();
+        updateTotalLabel();
+    }
+}
+
 void AccountProcessPage::onExecuteClicked()
 {
-    if (m_currentAccountNumber.isEmpty()) {
+    if (m_rightAccountNumber.isEmpty()) {
         QMessageBox::warning(this, "오류", "계좌를 먼저 선택하세요.");
         return;
     }
@@ -378,11 +502,20 @@ void AccountProcessPage::onExecuteClicked()
     }
 
     bool isDeposit = m_depositRadio->isChecked();
+
+    if (!isDeposit && m_rightAccountType == "savings") {
+        showBox(this, QMessageBox::Warning,
+                "출금 불가",
+                "저축계좌(savings)는 출금할 수 없습니다.");
+        m_depositRadio->setChecked(true);
+        return;
+    }
+
     QString reqType = isDeposit ? "deposit" : "withdraw";
 
     QJsonObject data;
-    data["accountNumber"] = m_currentAccountNumber;
-    data["accountPassword"] = m_accountPasswordEdit->text();
+    data["accountNumber"] = m_rightAccountNumber;
+    data["accountPassword"] = m_accountPasswordEdit->text().trimmed();
     data["amount"] = m_amountSpin->value();
     data["description"] = m_descriptionEdit->text().trimmed().isEmpty()
                               ? (isDeposit ? "입금" : "출금")
@@ -436,12 +569,70 @@ void AccountProcessPage::updateTotalLabel()
     m_totalLabel->setText(QString("TOTAL : %1건").arg(m_historyCount));
 }
 
-static void showBox(QWidget *parent, QMessageBox::Icon icon,
-                    const QString &title, const QString &text)
+void AccountProcessPage::renderHistoryLabels(const QJsonArray &transactions)
 {
-    QMessageBox *box = new QMessageBox(icon, title, text, QMessageBox::Ok, parent);
-    box->setAttribute(Qt::WA_DeleteOnClose);
-    box->open();
+    clearHistoryLabels();
+
+    for (const auto &v : transactions) {
+        QJsonObject tx = v.toObject();
+        QString typeText = tx["type"].toString();
+        QString text = QString("%1원 / %2")
+                           .arg(tx["amount"].toDouble(), 0, 'f', 0)
+                           .arg(tx["description"].toString());
+        addHistoryLabel(typeText, m_leftAccountNumber, text);
+    }
+}
+
+void AccountProcessPage::applyHistoryFilter()
+{
+    renderHistoryLabels(m_currentTransactions);
+}
+
+void AccountProcessPage::fillSearchResults(const QString &keyword)
+{
+    m_searchResultList->clear();
+
+    if (keyword.isEmpty()) {
+        m_searchResultList->setVisible(false);
+        return;
+    }
+
+    for (int i = 0; i < m_allAccounts.size(); ++i) {
+        QJsonObject acc = m_allAccounts[i].toObject();
+        QString accNum = acc["accountNumber"].toString();
+        QString typeText = acc["type"].toString();
+
+        if (accNum.contains(keyword, Qt::CaseInsensitive)) {
+            QListWidgetItem *item =
+                new QListWidgetItem(QString("%1 (%2)").arg(accNum, typeText), m_searchResultList);
+            item->setData(Qt::UserRole, i);
+        }
+    }
+
+    m_searchResultList->setVisible(m_searchResultList->count() > 0);
+}
+
+void AccountProcessPage::onSearchTextChanged(const QString &text)
+{
+    fillSearchResults(text.trimmed());
+}
+
+void AccountProcessPage::onSearchResultClicked(QListWidgetItem *item)
+{
+    if (!item)
+        return;
+
+    int index = item->data(Qt::UserRole).toInt();
+    if (index < 0 || index >= m_allAccounts.size())
+        return;
+
+    QJsonObject acc = m_allAccounts[index].toObject();
+    updateLeftSummary(acc);
+
+    m_searchEdit->setText(acc["accountNumber"].toString());
+    m_searchResultList->setVisible(false);
+
+    tryLoadLeftAccountDetail();
 }
 
 void AccountProcessPage::onResponseReceived(const QJsonObject &response)
@@ -455,36 +646,52 @@ void AccountProcessPage::onResponseReceived(const QJsonObject &response)
             return;
         }
 
-        QString previous = m_currentAccountNumber;
+        QString previousRight = m_rightAccountNumber;
+        QString previousLeft = m_leftAccountNumber;
+
         m_allAccounts = response["data"].toObject()["accounts"].toArray();
 
-        m_accountCombo->blockSignals(true);
-        m_accountCombo->clear();
+        m_detailAccountCombo->blockSignals(true);
+        m_detailAccountCombo->clear();
 
-        int selectedIndex = -1;
+        int selectedRightIndex = -1;
+        int selectedLeftIndex = -1;
 
         for (int i = 0; i < m_allAccounts.size(); ++i) {
             QJsonObject acc = m_allAccounts[i].toObject();
             QString accNum = acc["accountNumber"].toString();
             QString typeText = acc["type"].toString();
 
-            m_accountCombo->addItem(QString("%1 (%2)").arg(accNum, typeText), accNum);
+            m_detailAccountCombo->addItem(QString("%1 (%2)").arg(accNum, typeText), accNum);
 
-            if (accNum == previous)
-                selectedIndex = i;
+            if (accNum == previousRight)
+                selectedRightIndex = i;
+            if (accNum == previousLeft)
+                selectedLeftIndex = i;
         }
 
-        m_accountCombo->blockSignals(false);
+        m_detailAccountCombo->blockSignals(false);
 
         if (!m_allAccounts.isEmpty()) {
-            if (selectedIndex < 0)
-                selectedIndex = 0;
+            if (selectedRightIndex < 0)
+                selectedRightIndex = 0;
+            if (selectedLeftIndex < 0)
+                selectedLeftIndex = 0;
 
-            m_accountCombo->setCurrentIndex(selectedIndex);
+            m_detailAccountCombo->setCurrentIndex(selectedRightIndex);
+            updateRightSummary(m_allAccounts[selectedRightIndex].toObject());
+            updateLeftSummary(m_allAccounts[selectedLeftIndex].toObject());
+
+            if (!m_leftAccountNumber.isEmpty()) {
+                tryLoadLeftAccountDetail();
+            }
         } else {
-            m_currentAccountNumber.clear();
-            m_currentAccountType.clear();
-            m_currentBalance = 0;
+            m_leftAccountNumber.clear();
+            m_leftBalance = 0;
+            m_rightAccountNumber.clear();
+            m_rightAccountType.clear();
+            m_rightBalance = 0;
+            m_currentTransactions = QJsonArray();
 
             m_accountNumberLabel->setText("계좌번호 : -");
             m_balanceLabel->setText("잔액 : 0원");
@@ -494,6 +701,8 @@ void AccountProcessPage::onResponseReceived(const QJsonObject &response)
 
             clearHistoryLabels();
             updateTotalLabel();
+            m_searchResultList->clear();
+            m_searchResultList->setVisible(false);
         }
     }
     else if (type == "get_account_detail_response") {
@@ -503,28 +712,21 @@ void AccountProcessPage::onResponseReceived(const QJsonObject &response)
         }
 
         QJsonObject account = response["data"].toObject()["account"].toObject();
+        QString accountNumber = account["accountNumber"].toString();
 
-        m_currentAccountNumber = account["accountNumber"].toString();
-        m_currentAccountType = account["type"].toString();
-        m_currentBalance = static_cast<int>(account["balance"].toDouble());
+        QString currentPw = m_accountPasswordEdit->text().trimmed();
+        if (!currentPw.isEmpty() && accountNumber == m_rightAccountNumber) {
+            m_accountPasswordCache[accountNumber] = currentPw;
+        }
 
-        m_accountNumberLabel->setText(QString("계좌번호 : %1").arg(m_currentAccountNumber));
-        m_balanceLabel->setText(QString("잔액 : %1원").arg(m_currentBalance));
+        if (accountNumber == m_rightAccountNumber) {
+            updateRightSummary(account);
+        }
 
-        m_selectedAccountLabel->setText(m_currentAccountNumber);
-        m_selectedTypeLabel->setText(m_currentAccountType);
-        m_selectedBalanceLabel->setText(QString("%1원").arg(m_currentBalance));
-
-        clearHistoryLabels();
-
-        QJsonArray transactions = account["transactions"].toArray();
-        for (const auto &v : transactions) {
-            QJsonObject tx = v.toObject();
-            QString typeText = tx["type"].toString();
-            QString text = QString("%1원 / %2")
-                               .arg(tx["amount"].toDouble(), 0, 'f', 0)
-                               .arg(tx["description"].toString());
-            addHistoryLabel(typeText, m_currentAccountNumber, text);
+        if (accountNumber == m_leftAccountNumber) {
+            updateLeftSummary(account);
+            m_currentTransactions = account["transactions"].toArray();
+            applyHistoryFilter();
         }
     }
     else if (type == "deposit_response" || type == "withdraw_response") {
@@ -533,17 +735,15 @@ void AccountProcessPage::onResponseReceived(const QJsonObject &response)
             return;
         }
 
-        m_currentBalance = static_cast<int>(response["data"].toObject()["balance"].toDouble());
-        m_balanceLabel->setText(QString("잔액 : %1원").arg(m_currentBalance));
-        m_selectedBalanceLabel->setText(QString("%1원").arg(m_currentBalance));
+        m_rightBalance = static_cast<int>(response["data"].toObject()["balance"].toDouble());
+        m_selectedBalanceLabel->setText(QString("%1원").arg(m_rightBalance));
 
-        QString txType = (type == "deposit_response") ? "deposit" : "withdraw";
-        QString desc = m_descriptionEdit->text().trimmed().isEmpty()
-                           ? ((txType == "deposit") ? "입금" : "출금")
-                           : m_descriptionEdit->text().trimmed();
-
-        addHistoryLabel(txType, m_currentAccountNumber,
-                        QString("%1원 / %2").arg(m_amountSpin->value(), 0, 'f', 0).arg(desc));
+        if (!m_rightAccountNumber.isEmpty()) {
+            QString pw = m_accountPasswordEdit->text().trimmed();
+            if (!pw.isEmpty()) {
+                m_accountPasswordCache[m_rightAccountNumber] = pw;
+            }
+        }
 
         showBox(this, QMessageBox::Information, "완료", response["message"].toString());
 
@@ -551,6 +751,16 @@ void AccountProcessPage::onResponseReceived(const QJsonObject &response)
         m_descriptionEdit->clear();
 
         loadAccounts();
-        loadAccountDetail(m_currentAccountNumber);
+
+        if (!m_rightAccountNumber.isEmpty()) {
+            QString pw = m_accountPasswordCache.value(m_rightAccountNumber);
+            if (!pw.isEmpty()) {
+                loadAccountDetail(m_rightAccountNumber, pw);
+            }
+        }
+
+        if (!m_leftAccountNumber.isEmpty() && m_leftAccountNumber != m_rightAccountNumber) {
+            tryLoadLeftAccountDetail();
+        }
     }
 }
