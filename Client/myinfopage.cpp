@@ -13,6 +13,7 @@
 #include <QMessageBox>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QDateTime>
 
 static const QString S_INPUT =
     "QLineEdit {"
@@ -359,7 +360,14 @@ void MyInfoPage::onNetworkResponse(const QJsonObject &resp)
         QJsonObject user = resp["data"].toObject()["user"].toObject();
         m_idLabel->setText(user["id"].toString());
         m_nameLabel->setText(user["name"].toString());
-        m_createdAtLabel->setText(user["createdAt"].toString());
+        QString rawDate = user["createdAt"].toString();
+        QDateTime dt = QDateTime::fromString(rawDate, Qt::ISODate);
+        if (!dt.isValid())
+            dt = QDateTime::fromString(rawDate, Qt::ISODateWithMs);
+        QString displayDate = dt.isValid()
+            ? dt.date().toString("yyyy년 MM월 dd일")
+            : rawDate;
+        m_createdAtLabel->setText(displayDate);
     }
 
     else if (type == "list_accounts_response") {
