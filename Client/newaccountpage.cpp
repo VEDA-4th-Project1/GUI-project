@@ -16,40 +16,48 @@
 
 NewAccountPage::NewAccountPage(QWidget* parent) : QWidget(parent) {
     setupUI();
-    connect(NetworkClient::instance(), &NetworkClient::responseReceived,
-            this, &NewAccountPage::onNetworkResponse);
+    connect(NetworkClient::instance(), SIGNAL(responseReceived(QJsonObject)),
+            this, SLOT(onNetworkResponse(QJsonObject)));
 }
 
 void NewAccountPage::setupUI() {
-    setStyleSheet(AppStyle::PAGE_BG_LABEL);
+    setStyleSheet("background-color: #F2F4F6;");
 
     QVBoxLayout* root = new QVBoxLayout(this);
-    root->setContentsMargins(40, 40, 40, 40);
+    root->setContentsMargins(48, 40, 48, 40);
     root->setSpacing(0);
-    root->addStretch();
 
-    // ── 계좌 개설 카드 ────────────────────────────────────────────────────────
+    // ── 페이지 타이틀 ─────────────────────────────────────────────────────────
+    QLabel* pageTitle = new QLabel("신규 계좌 개설", this);
+    pageTitle->setStyleSheet(
+        "font-size: 24px; font-weight: 800; color: #191F28; border: none;");
+    root->addWidget(pageTitle);
+    root->addSpacing(6);
+
+    QLabel* pageSub = new QLabel("새 계좌를 개설하여 자산을 관리하세요.", this);
+    pageSub->setStyleSheet("font-size: 14px; color: #8B95A1; border: none;");
+    root->addWidget(pageSub);
+    root->addSpacing(24);
+
+    // ── 계좌 개설 카드 (전체 너비) ────────────────────────────────────────────
     QFrame* card = new QFrame(this);
     card->setStyleSheet(AppStyle::CARD);
-    card->setMaximumWidth(560);
+    AppStyle::applyCardShadow(card);
 
     QVBoxLayout* cl = new QVBoxLayout(card);
-    cl->setContentsMargins(32, 28, 32, 28);
-    cl->setSpacing(16);
-
-    QLabel* title = new QLabel("신규 계좌 개설", card);
-    title->setStyleSheet(AppStyle::LABEL_TITLE);
-    cl->addWidget(title);
-    cl->addSpacing(4);
+    cl->setContentsMargins(40, 36, 40, 36);
+    cl->setSpacing(20);
 
     const QString &inputStyle    = AppStyle::INPUT_ALL;
-    const QString &labelStyle    = AppStyle::LABEL_FIELD;
     const QString &fixedValStyle = AppStyle::FIXED_VAL;
 
     auto addRow = [&](const QString& labelText, QWidget* field) {
         QHBoxLayout* row = new QHBoxLayout();
+        row->setSpacing(0);
         QLabel* lbl = new QLabel(labelText, card);
-        lbl->setStyleSheet(labelStyle);
+        lbl->setStyleSheet(
+            "color: #4E5968; font-size: 14px; font-weight: 600; border: none;");
+        lbl->setFixedWidth(140);
         row->addWidget(lbl);
         row->addWidget(field, 1);
         cl->addLayout(row);
@@ -59,16 +67,16 @@ void NewAccountPage::setupUI() {
     m_typeCombo = new QComboBox(card);
     m_typeCombo->addItem("저축 계좌 (savings)",    "savings");
     m_typeCombo->addItem("입출금 계좌 (checking)", "checking");
-    m_typeCombo->setFixedHeight(40);
+    m_typeCombo->setMinimumHeight(48);
     m_typeCombo->setStyleSheet(inputStyle +
-        "QComboBox::drop-down { border: none; width: 28px; }");
+        "QComboBox::drop-down { border: none; width: 32px; }");
     addRow("계좌 종류", m_typeCombo);
 
     // 계좌 비밀번호
     m_accPasswordEdit = new QLineEdit(card);
     m_accPasswordEdit->setPlaceholderText("4자 이상");
     m_accPasswordEdit->setEchoMode(QLineEdit::Password);
-    m_accPasswordEdit->setFixedHeight(40);
+    m_accPasswordEdit->setMinimumHeight(48);
     m_accPasswordEdit->setStyleSheet(inputStyle);
     addRow("계좌 비밀번호", m_accPasswordEdit);
 
@@ -78,59 +86,58 @@ void NewAccountPage::setupUI() {
     m_initBalanceSpin->setSingleStep(10000);
     m_initBalanceSpin->setDecimals(0);
     m_initBalanceSpin->setSuffix(" 원");
-    m_initBalanceSpin->setFixedHeight(40);
+    m_initBalanceSpin->setMinimumHeight(48);
     m_initBalanceSpin->setStyleSheet(inputStyle);
     addRow("초기 입금액", m_initBalanceSpin);
 
-    // 이자율 — 저축계좌 전용, 고정값(3%) 표시만
+    // 이자율 — 저축계좌 전용
     m_rateWidget = new QWidget(card);
     m_rateWidget->setStyleSheet("QWidget { border: none; background: transparent; }");
     QHBoxLayout* rateRow = new QHBoxLayout(m_rateWidget);
     rateRow->setContentsMargins(0, 0, 0, 0);
+    rateRow->setSpacing(0);
     QLabel* rateLabel = new QLabel("이자율", m_rateWidget);
-    rateLabel->setStyleSheet(labelStyle);
+    rateLabel->setStyleSheet(
+        "color: #4E5968; font-size: 14px; font-weight: 600; border: none;");
+    rateLabel->setFixedWidth(140);
     QLabel* rateVal = new QLabel("연 3.0% (고정)", m_rateWidget);
-    rateVal->setFixedHeight(40);
+    rateVal->setMinimumHeight(48);
     rateVal->setStyleSheet(fixedValStyle);
     rateRow->addWidget(rateLabel);
     rateRow->addWidget(rateVal, 1);
     cl->addWidget(m_rateWidget);
 
-    // 마이너스 한도 — 입출금계좌 전용, 0원 고정 표시만
+    // 마이너스 한도 — 입출금계좌 전용
     m_limitWidget = new QWidget(card);
     m_limitWidget->setStyleSheet("QWidget { border: none; background: transparent; }");
     QHBoxLayout* limitRow = new QHBoxLayout(m_limitWidget);
     limitRow->setContentsMargins(0, 0, 0, 0);
+    limitRow->setSpacing(0);
     QLabel* limitLabel = new QLabel("마이너스 한도", m_limitWidget);
-    limitLabel->setStyleSheet(labelStyle);
+    limitLabel->setStyleSheet(
+        "color: #4E5968; font-size: 14px; font-weight: 600; border: none;");
+    limitLabel->setFixedWidth(140);
     QLabel* limitVal = new QLabel("0 원 (고정)", m_limitWidget);
-    limitVal->setFixedHeight(40);
+    limitVal->setMinimumHeight(48);
     limitVal->setStyleSheet(fixedValStyle);
     limitRow->addWidget(limitLabel);
     limitRow->addWidget(limitVal, 1);
     m_limitWidget->setVisible(false);
     cl->addWidget(m_limitWidget);
 
-    cl->addSpacing(4);
-
     // 개설 버튼
     m_createBtn = new QPushButton("계좌 개설", card);
-    m_createBtn->setFixedHeight(46);
+    m_createBtn->setMinimumHeight(52);
     m_createBtn->setCursor(Qt::PointingHandCursor);
     m_createBtn->setStyleSheet(AppStyle::BTN_BLUE);
+    cl->addSpacing(4);
     cl->addWidget(m_createBtn);
 
-    // 카드를 가운데 정렬
-    QHBoxLayout* centerRow = new QHBoxLayout();
-    centerRow->addStretch();
-    centerRow->addWidget(card);
-    centerRow->addStretch();
-    root->addLayout(centerRow);
+    root->addWidget(card);
     root->addStretch();
 
-    connect(m_createBtn, &QPushButton::clicked, this, &NewAccountPage::onCreateClicked);
-    connect(m_typeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &NewAccountPage::onTypeChanged);
+    connect(m_createBtn, SIGNAL(clicked()),               this, SLOT(onCreateClicked()));
+    connect(m_typeCombo, SIGNAL(currentIndexChanged(int)), this, SLOT(onTypeChanged(int)));
 }
 
 void NewAccountPage::onTypeChanged(int index) {

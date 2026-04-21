@@ -19,14 +19,10 @@ LoginDialog::LoginDialog(QWidget *parent)
     setWindowTitle(tr("로그인"));
     setFixedSize(460, 520);
 
-    // 서버 응답을 이 다이얼로그에서 처리
-    connect(NetworkClient::instance(), &NetworkClient::responseReceived,
-            this, &LoginDialog::onNetworkResponse);
-    connect(NetworkClient::instance(), &NetworkClient::errorOccurred,
-            this, [this](const QString& msg) {
-                QMessageBox::critical(this, tr("네트워크 오류"), msg);
-                m_confirmBtn->setEnabled(true);
-            });
+    connect(NetworkClient::instance(), SIGNAL(responseReceived(QJsonObject)),
+            this, SLOT(onNetworkResponse(QJsonObject)));
+    connect(NetworkClient::instance(), SIGNAL(errorOccurred(QString)),
+            this, SLOT(onNetworkError(QString)));
 }
 
 LoginDialog::~LoginDialog() = default;
@@ -130,11 +126,28 @@ void LoginDialog::applyStyles()
 
     m_loginCard->setStyleSheet(
         "#loginCard { " + AppStyle::DARK_CARD_BODY + " }"
-        "#titleLabel { color: #f8fafc; font-size: 24px; font-weight: 700; }"
-        "#subtitleLabel { color: #94a3b8; font-size: 13px; }"
-        "QFrame#divider { color: #334155; }"
+        "#titleLabel { color: #191F28; font-size: 26px; font-weight: 800; }"
+        "#subtitleLabel { color: #8B95A1; font-size: 13px; }"
+        "QFrame#divider { color: #E5E8EB; background-color: #E5E8EB; max-height: 1px; }"
         + AppStyle::DARK_FIELD_LABEL
         + AppStyle::DARK_INPUT
+        + "QPushButton#registerBtn {"
+          "  background-color: #F2F4F6; color: #4E5968; border: 1px solid #E5E8EB;"
+          "  border-radius: 10px; font-size: 14px; font-weight: 600; padding: 0 12px;"
+          "}"
+          "QPushButton#registerBtn:hover { background-color: #E5E8EB; color: #191F28; }"
+          "QPushButton#confirmBtn {"
+          "  background-color: #3182F6; color: white; border: none;"
+          "  border-radius: 12px; font-size: 15px; font-weight: 700;"
+          "}"
+          "QPushButton#confirmBtn:hover { background-color: #1B64DA; }"
+          "QPushButton#confirmBtn:pressed { background-color: #1B56BC; }"
+          "QPushButton#confirmBtn:disabled { background-color: #B0C8F0; }"
+          "QPushButton#cancelBtn {"
+          "  background-color: #F2F4F6; color: #4E5968; border: 1px solid #E5E8EB;"
+          "  border-radius: 12px; font-size: 15px; font-weight: 600;"
+          "}"
+          "QPushButton#cancelBtn:hover { background-color: #E5E8EB; }"
     );
 }
 
@@ -174,8 +187,8 @@ void LoginDialog::onNetworkResponse(const QJsonObject& resp)
 
     if (resp["status"].toString() == "success") {
         // 로그인 성공 후 이 LoginDialog가 다시 응답을 처리하지 않도록 연결 해제
-        disconnect(NetworkClient::instance(), &NetworkClient::responseReceived,
-                   this, &LoginDialog::onNetworkResponse);
+        disconnect(NetworkClient::instance(), SIGNAL(responseReceived(QJsonObject)),
+                   this, SLOT(onNetworkResponse(QJsonObject)));
 
         QJsonObject respData = resp["data"].toObject();
         QJsonObject user     = respData["user"].toObject();
@@ -193,6 +206,12 @@ void LoginDialog::onNetworkResponse(const QJsonObject& resp)
     } else {
         QMessageBox::warning(this, tr("로그인 실패"), resp["message"].toString());
     }
+}
+
+void LoginDialog::onNetworkError(const QString& message)
+{
+    QMessageBox::critical(this, tr("네트워크 오류"), message);
+    m_confirmBtn->setEnabled(true);
 }
 
 void LoginDialog::onCancelClicked()

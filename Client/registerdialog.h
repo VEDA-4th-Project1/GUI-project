@@ -20,12 +20,9 @@ private slots:
     void onDuplicateCheckClicked();
     void onConfirmClicked();
     void onCancelClicked();
-
-    // 아이디 수정 시 중복확인 상태 초기화
     void onIdTextChanged();
-
-    // 서버 응답 처리 (check_id_response / register_response)
     void onNetworkResponse(const QJsonObject& response);
+    void onNetworkError(const QString& message);
 
 private:
     void setupUI();

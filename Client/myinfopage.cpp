@@ -31,25 +31,27 @@ static int showMsg(QWidget *parent, QMessageBox::Icon icon,
 MyInfoPage::MyInfoPage(QWidget *parent) : QWidget(parent)
 {
     setupUI();
-    connect(NetworkClient::instance(), &NetworkClient::responseReceived,
-            this, &MyInfoPage::onNetworkResponse);
+    connect(NetworkClient::instance(), SIGNAL(responseReceived(QJsonObject)),
+            this, SLOT(onNetworkResponse(QJsonObject)));
 }
 
 void MyInfoPage::setupUI()
 {
-    setStyleSheet("MyInfoPage { background-color: #F5F7FB; }");
+    setStyleSheet("background-color: #F2F4F6;");
 
     QVBoxLayout *root = new QVBoxLayout(this);
     root->setContentsMargins(40, 40, 40, 40);
+    root->setSpacing(20);
 
-    QWidget *card = new QWidget;
-    card->setStyleSheet(
-        "background-color: white; border-radius: 16px; border: 1px solid #E5E7EB;");
-    card->setMaximumWidth(500);
+    // ── 내 정보 카드 ──────────────────────────────────────────────────────────
+    QFrame *card = new QFrame(this);
+    card->setStyleSheet(AppStyle::CARD);
+    card->setMaximumWidth(560);
+    AppStyle::applyCardShadow(card);
 
     QVBoxLayout *cardLayout = new QVBoxLayout(card);
     cardLayout->setContentsMargins(32, 28, 32, 28);
-    cardLayout->setSpacing(14);
+    cardLayout->setSpacing(16);
 
     QLabel *title = new QLabel("내 정보");
     title->setStyleSheet(AppStyle::LABEL_TITLE);
@@ -58,18 +60,18 @@ void MyInfoPage::setupUI()
     auto makeDivider = [&]() -> QFrame* {
         QFrame *div = new QFrame;
         div->setFrameShape(QFrame::HLine);
-        div->setStyleSheet("background-color: #F3F4F6; border: none; max-height: 1px;");
+        div->setStyleSheet("background-color: #E5E8EB; border: none; max-height: 1px;");
         return div;
     };
     cardLayout->addWidget(makeDivider());
 
     auto addInfoRow = [&](const QString &fieldName, QLabel *&valueLabel) {
         QHBoxLayout *row = new QHBoxLayout;
+        row->setSpacing(16);
         QLabel *field = new QLabel(fieldName);
-        field->setStyleSheet(
-            "font-size: 13px; font-weight: 600; color: #6B7280; border: none; min-width: 80px;");
+        field->setStyleSheet(AppStyle::LABEL_FIELD);
         valueLabel = new QLabel("-");
-        valueLabel->setStyleSheet("font-size: 14px; color: #111827; border: none;");
+        valueLabel->setStyleSheet("font-size: 14px; color: #191F28; border: none;");
         row->addWidget(field);
         row->addWidget(valueLabel, 1);
         cardLayout->addLayout(row);
@@ -85,8 +87,8 @@ void MyInfoPage::setupUI()
 
     QPushButton *btnChangePw = new QPushButton("비밀번호 변경");
     QPushButton *btnCloseAcc = new QPushButton("계좌 해지");
-    btnChangePw->setFixedHeight(44);
-    btnCloseAcc->setFixedHeight(44);
+    btnChangePw->setMinimumHeight(44);
+    btnCloseAcc->setMinimumHeight(44);
     btnChangePw->setCursor(Qt::PointingHandCursor);
     btnCloseAcc->setCursor(Qt::PointingHandCursor);
     btnChangePw->setStyleSheet(AppStyle::BTN_BLUE);
@@ -98,13 +100,14 @@ void MyInfoPage::setupUI()
     btnRow->addWidget(btnCloseAcc);
     cardLayout->addLayout(btnRow);
 
-    QHBoxLayout *center = new QHBoxLayout;
-    center->addStretch();
-    center->addWidget(card);
-    center->addStretch();
+    // 카드를 중앙 정렬하되 가득 차면 늘어나도록
+    QHBoxLayout *centerRow = new QHBoxLayout;
+    centerRow->addStretch();
+    centerRow->addWidget(card, 1);
+    centerRow->addStretch();
 
     root->addStretch();
-    root->addLayout(center);
+    root->addLayout(centerRow);
     root->addStretch();
 
     connect(btnChangePw, &QPushButton::clicked, this, &MyInfoPage::openChangePasswordDialog);
@@ -130,17 +133,17 @@ void MyInfoPage::loadUserInfo()
 // ── 비밀번호 변경 다이얼로그 ──────────────────────────────────────────────────
 void MyInfoPage::openChangePasswordDialog()
 {
-    QDialog *dlg = new QDialog(this);
-    dlg->setWindowTitle("비밀번호 변경");
-    dlg->setFixedWidth(380);
-    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    m_changePwDlg = new QDialog(this);
+    m_changePwDlg->setWindowTitle("비밀번호 변경");
+    m_changePwDlg->setFixedWidth(380);
+    m_changePwDlg->setAttribute(Qt::WA_DeleteOnClose);
 
-    QVBoxLayout *layout = new QVBoxLayout(dlg);
+    QVBoxLayout *layout = new QVBoxLayout(m_changePwDlg);
     layout->setContentsMargins(28, 24, 28, 24);
     layout->setSpacing(8);
 
     QLabel *title = new QLabel("비밀번호 변경");
-    title->setStyleSheet("font-size: 17px; font-weight: 700; color: #111827;");
+    title->setStyleSheet("font-size: 17px; font-weight: 700; color: #191F28;");
     layout->addWidget(title);
     layout->addSpacing(8);
 
@@ -155,16 +158,15 @@ void MyInfoPage::openChangePasswordDialog()
         layout->addWidget(edit);
     };
 
-    QLineEdit *currentPwEdit, *newPwEdit, *confirmPwEdit;
-    addField("현재 비밀번호",    currentPwEdit);
-    addField("새 비밀번호",      newPwEdit);
-    addField("새 비밀번호 확인", confirmPwEdit);
+    addField("현재 비밀번호",    m_currentPwEdit);
+    addField("새 비밀번호",      m_newPwEdit);
+    addField("새 비밀번호 확인", m_confirmPwEdit);
     layout->addSpacing(12);
 
     QPushButton *btnOk     = new QPushButton("변경");
     QPushButton *btnCancel = new QPushButton("취소");
-    btnOk->setFixedHeight(42);
-    btnCancel->setFixedHeight(42);
+    btnOk->setMinimumHeight(42);
+    btnCancel->setMinimumHeight(42);
     btnOk->setCursor(Qt::PointingHandCursor);
     btnCancel->setCursor(Qt::PointingHandCursor);
     btnOk->setStyleSheet(AppStyle::BTN_BLUE);
@@ -176,35 +178,38 @@ void MyInfoPage::openChangePasswordDialog()
     btnRow->addWidget(btnCancel);
     layout->addLayout(btnRow);
 
-    connect(btnCancel, &QPushButton::clicked, dlg, &QDialog::reject);
-    connect(btnOk, &QPushButton::clicked, dlg, [=]() {
-        if (currentPwEdit->text().isEmpty() || newPwEdit->text().isEmpty()) {
-            showMsg(dlg, QMessageBox::Warning, "오류", "모든 항목을 입력해주세요.");
-            return;
-        }
-        if (newPwEdit->text().length() < 6) {
-            showMsg(dlg, QMessageBox::Warning, "오류", "새 비밀번호는 6자 이상이어야 합니다.");
-            return;
-        }
-        if (newPwEdit->text() != confirmPwEdit->text()) {
-            showMsg(dlg, QMessageBox::Warning, "오류", "새 비밀번호가 일치하지 않습니다.");
-            return;
-        }
+    connect(btnCancel, SIGNAL(clicked()), m_changePwDlg, SLOT(reject()));
+    connect(btnOk,     SIGNAL(clicked()), this,          SLOT(onChangePwOkClicked()));
 
-        QJsonObject data;
-        data["currentPassword"] = currentPwEdit->text();
-        data["newPassword"]     = newPwEdit->text();
+    m_changePwDlg->exec();
+}
 
-        QJsonObject request;
-        request["type"]  = "change_password";
-        request["token"] = SessionContext::instance().token();
-        request["data"]  = data;
-        NetworkClient::instance()->sendRequest(request);
+void MyInfoPage::onChangePwOkClicked()
+{
+    if (m_currentPwEdit->text().isEmpty() || m_newPwEdit->text().isEmpty()) {
+        showMsg(m_changePwDlg, QMessageBox::Warning, "오류", "모든 항목을 입력해주세요.");
+        return;
+    }
+    if (m_newPwEdit->text().length() < 6) {
+        showMsg(m_changePwDlg, QMessageBox::Warning, "오류", "새 비밀번호는 6자 이상이어야 합니다.");
+        return;
+    }
+    if (m_newPwEdit->text() != m_confirmPwEdit->text()) {
+        showMsg(m_changePwDlg, QMessageBox::Warning, "오류", "새 비밀번호가 일치하지 않습니다.");
+        return;
+    }
 
-        dlg->accept();
-    });
+    QJsonObject data;
+    data["currentPassword"] = m_currentPwEdit->text();
+    data["newPassword"]     = m_newPwEdit->text();
 
-    dlg->exec();
+    QJsonObject request;
+    request["type"]  = "change_password";
+    request["token"] = SessionContext::instance().token();
+    request["data"]  = data;
+    NetworkClient::instance()->sendRequest(request);
+
+    m_changePwDlg->accept();
 }
 
 // ── 계좌 해지 다이얼로그 ──────────────────────────────────────────────────────
@@ -217,98 +222,89 @@ void MyInfoPage::openCloseAccountDialog()
         return;
     }
 
-    QDialog *dlg = new QDialog(this);
-    dlg->setWindowTitle("계좌 해지");
-    dlg->setFixedWidth(380);
-    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    m_closeAccDlg = new QDialog(this);
+    m_closeAccDlg->setWindowTitle("계좌 해지");
+    m_closeAccDlg->setFixedWidth(380);
+    m_closeAccDlg->setAttribute(Qt::WA_DeleteOnClose);
 
-    QVBoxLayout *layout = new QVBoxLayout(dlg);
+    QVBoxLayout *layout = new QVBoxLayout(m_closeAccDlg);
     layout->setContentsMargins(28, 24, 28, 24);
     layout->setSpacing(8);
 
     QLabel *title = new QLabel("계좌 해지");
-    title->setStyleSheet("font-size: 17px; font-weight: 700; color: #111827;");
+    title->setStyleSheet("font-size: 17px; font-weight: 700; color: #191F28;");
     layout->addWidget(title);
     layout->addSpacing(8);
 
     QLabel *accLabel = new QLabel("해지할 계좌 선택");
     accLabel->setStyleSheet(AppStyle::LABEL_MUTED);
-    QComboBox *combo = new QComboBox;
-    combo->setFixedHeight(40);
-    combo->addItems(m_accountList);
-    combo->setStyleSheet(AppStyle::COMBO);
+    m_closeAccCombo = new QComboBox;
+    m_closeAccCombo->setFixedHeight(40);
+    m_closeAccCombo->addItems(m_accountList);
+    m_closeAccCombo->setStyleSheet(AppStyle::COMBO);
 
     QLabel *pwLabel = new QLabel("계좌 비밀번호");
     pwLabel->setStyleSheet(AppStyle::LABEL_MUTED);
-    QLineEdit *pwEdit = new QLineEdit;
-    pwEdit->setEchoMode(QLineEdit::Password);
-    pwEdit->setPlaceholderText("계좌 비밀번호를 입력하세요");
-    pwEdit->setFixedHeight(40);
-    pwEdit->setStyleSheet(AppStyle::INPUT);
+    m_closeAccPwEdit = new QLineEdit;
+    m_closeAccPwEdit->setEchoMode(QLineEdit::Password);
+    m_closeAccPwEdit->setPlaceholderText("계좌 비밀번호를 입력하세요");
+    m_closeAccPwEdit->setFixedHeight(40);
+    m_closeAccPwEdit->setStyleSheet(AppStyle::INPUT);
 
     layout->addWidget(accLabel);
-    layout->addWidget(combo);
+    layout->addWidget(m_closeAccCombo);
     layout->addWidget(pwLabel);
-    layout->addWidget(pwEdit);
+    layout->addWidget(m_closeAccPwEdit);
     layout->addSpacing(12);
 
-    QPushButton *btnOk     = new QPushButton("해지");
-    QPushButton *btnCancel = new QPushButton("취소");
-    btnOk->setFixedHeight(42);
-    btnCancel->setFixedHeight(42);
-    btnOk->setCursor(Qt::PointingHandCursor);
+    m_closeAccOkBtn         = new QPushButton("해지");
+    QPushButton *btnCancel  = new QPushButton("취소");
+    m_closeAccOkBtn->setMinimumHeight(42);
+    btnCancel->setMinimumHeight(42);
+    m_closeAccOkBtn->setCursor(Qt::PointingHandCursor);
     btnCancel->setCursor(Qt::PointingHandCursor);
-    btnOk->setStyleSheet(AppStyle::BTN_RED);
+    m_closeAccOkBtn->setStyleSheet(AppStyle::BTN_RED);
     btnCancel->setStyleSheet(AppStyle::BTN_GRAY);
 
     QHBoxLayout *btnRow = new QHBoxLayout;
     btnRow->setSpacing(10);
-    btnRow->addWidget(btnOk);
+    btnRow->addWidget(m_closeAccOkBtn);
     btnRow->addWidget(btnCancel);
     layout->addLayout(btnRow);
 
-    connect(btnCancel, &QPushButton::clicked, dlg, &QDialog::reject);
+    connect(btnCancel,      SIGNAL(clicked()), m_closeAccDlg, SLOT(reject()));
+    connect(m_closeAccOkBtn, SIGNAL(clicked()), this,         SLOT(onCloseAccOkClicked()));
 
-    connect(btnOk, &QPushButton::clicked, dlg, [=]() {
-        if (pwEdit->text().isEmpty()) {
-            showMsg(dlg, QMessageBox::Warning, "오류", "계좌 비밀번호를 입력해주세요.");
-            return;
-        }
+    m_closeAccDlg->exec();
+}
 
-        // "110-921-427450 (savings)" 에서 계좌번호만 파싱
-        QString selectedText = combo->currentText();
-        QString accountNumber = selectedText.left(selectedText.indexOf(" ("));
+void MyInfoPage::onCloseAccOkClicked()
+{
+    if (m_closeAccPwEdit->text().isEmpty()) {
+        showMsg(m_closeAccDlg, QMessageBox::Warning, "오류", "계좌 비밀번호를 입력해주세요.");
+        return;
+    }
 
-        int reply = showMsg(dlg, QMessageBox::Question, "계좌 해지",
-                            QString("계좌 [%1]을 정말 해지하시겠습니까?").arg(accountNumber),
-                            QMessageBox::Yes | QMessageBox::No);
-        if (reply != QMessageBox::Yes) return;
+    const QString selectedText  = m_closeAccCombo->currentText();
+    const QString accountNumber = selectedText.left(selectedText.indexOf(" ("));
 
-        // 버튼 비활성화 (중복 클릭 방지)
-        btnOk->setEnabled(false);
-        btnCancel->setEnabled(false);
+    int reply = showMsg(m_closeAccDlg, QMessageBox::Question, "계좌 해지",
+                        QString("계좌 [%1]을 정말 해지하시겠습니까?").arg(accountNumber),
+                        QMessageBox::Yes | QMessageBox::No);
+    if (reply != QMessageBox::Yes) return;
 
-        QJsonObject data;
-        data["accountNumber"]   = accountNumber;
-        data["accountPassword"] = pwEdit->text();
+    m_closeAccOkBtn->setEnabled(false);
 
-        QJsonObject request;
-        request["type"]  = "close_account";
-        request["token"] = SessionContext::instance().token();
-        request["data"]  = data;
-        NetworkClient::instance()->sendRequest(request);
+    QJsonObject data;
+    data["accountNumber"]   = accountNumber;
+    data["accountPassword"] = m_closeAccPwEdit->text();
 
-        // 응답은 MyInfoPage::onNetworkResponse 에서 처리
-        // 성공 시 다이얼로그를 거기서 닫음
-        // dlg 포인터를 onNetworkResponse 에서 쓸 수 있도록 연결
-        connect(NetworkClient::instance(), &NetworkClient::responseReceived,
-                dlg, [dlg](const QJsonObject &resp) {
-                    if (resp["type"].toString() == "close_account_response")
-                        dlg->accept();   // 응답 받으면 그때 닫기
-                });
-    });
-
-    dlg->exec();
+    QJsonObject request;
+    request["type"]  = "close_account";
+    request["token"] = SessionContext::instance().token();
+    request["data"]  = data;
+    NetworkClient::instance()->sendRequest(request);
+    // 응답은 onNetworkResponse 에서 처리 → close_account_response 성공 시 m_closeAccDlg->accept()
 }
 
 // ── 서버 응답 처리 ────────────────────────────────────────────────────────────
@@ -354,9 +350,14 @@ void MyInfoPage::onNetworkResponse(const QJsonObject &resp)
 
     else if (type == "close_account_response") {
         if (status == "success") {
+            if (m_closeAccDlg) {
+                m_closeAccDlg->accept();
+                m_closeAccDlg = nullptr;
+            }
             showMsg(this, QMessageBox::Information, "완료", "계좌가 해지되었습니다.");
-            loadUserInfo();  // 목록 새로고침 (계좌 제거 확인)
+            loadUserInfo();
         } else {
+            if (m_closeAccOkBtn) m_closeAccOkBtn->setEnabled(true);
             showMsg(this, QMessageBox::Critical, "실패", resp["message"].toString());
         }
     }

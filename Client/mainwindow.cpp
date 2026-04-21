@@ -15,104 +15,119 @@
 #include <QPushButton>
 #include <QLabel>
 #include <QStackedWidget>
-#include <QFont>
 #include <QFrame>
 #include <QJsonObject>
+#include <QIcon>
+#include <QSize>
+
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     QWidget *central = new QWidget(this);
     setCentralWidget(central);
-    resize(1100, 700);
+    setMinimumSize(900, 600);
+    resize(1100, 720);
 
-    central->setStyleSheet(AppStyle::PAGE_BG);
+    central->setStyleSheet("background-color: #F2F4F6;");
 
     QHBoxLayout *mainLayout = new QHBoxLayout(central);
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
-    // 사이드 메뉴
+    // ── 사이드바 ─────────────────────────────────────────────────────────────
+    // QWidget#sidebar 셀렉터 대신 직접 스타일 지정 (Qt setStyleSheet 셀렉터 미적용 이슈 방지)
     QWidget *sideMenuWidget = new QWidget;
     sideMenuWidget->setFixedWidth(240);
     sideMenuWidget->setStyleSheet(
-        "background-color: #111827;"
-        "border-right: 1px solid #1F2937;"
-        );
+        "background-color: #0B1220;"
+        "border-right: 1px solid #1E293B;");
 
     QVBoxLayout *sideLayout = new QVBoxLayout(sideMenuWidget);
-    sideLayout->setContentsMargins(20, 24, 20, 24);
-    sideLayout->setSpacing(12);
+    sideLayout->setContentsMargins(16, 28, 16, 24);
+    sideLayout->setSpacing(4);
 
+    // 로고
     QLabel *logoLabel = new QLabel("Easy Bank");
-    logoLabel->setStyleSheet(
-        "color: white;"
-        "font-size: 24px;"
-        "font-weight: bold;"
-        );
+    logoLabel->setStyleSheet(AppStyle::SIDEBAR_LOGO);
+    logoLabel->setContentsMargins(8, 0, 0, 0);
 
-    QLabel *userLabel = new QLabel(QString("%1님\n환영합니다").arg(SessionContext::instance().userName()));
-    userLabel->setStyleSheet(
-        "color: #D1D5DB;"
-        "font-size: 14px;"
-        "line-height: 1.6;"
-        );
+    QLabel *logoSub = new QLabel("PERSONAL BANKING");
+    logoSub->setStyleSheet(AppStyle::SIDEBAR_LOGO_SUB);
+    logoSub->setContentsMargins(8, 0, 0, 0);
 
-    QFrame *line = new QFrame;
-    line->setFrameShape(QFrame::HLine);
-    line->setStyleSheet("color: #374151; background-color: #374151; max-height: 1px;");
+    // 유저 카드
+    QWidget *userCard = new QWidget;
+    userCard->setStyleSheet(
+        "QWidget {"
+        "  background-color: #111B2E; border: 1px solid #1E293B; border-radius: 12px;"
+        "}"
+        "QLabel { background: transparent; border: none; }");
+    QVBoxLayout *userCardLayout = new QVBoxLayout(userCard);
+    userCardLayout->setContentsMargins(14, 12, 14, 12);
+    userCardLayout->setSpacing(2);
 
-    btnHome = new QPushButton("홈");
-    btnNewAccount = new QPushButton("신규계좌 관리");
-    btnMyInfo = new QPushButton("내정보");
-    btnAccountProcess = new QPushButton("계좌처리");
+    QLabel *helloLabel = new QLabel("WELCOME BACK");
+    helloLabel->setStyleSheet(AppStyle::SIDEBAR_USER_HELLO);
+
+    QLabel *nameLabel = new QLabel(SessionContext::instance().userName() + "님");
+    nameLabel->setStyleSheet(AppStyle::SIDEBAR_USER_NAME);
+
+    userCardLayout->addWidget(helloLabel);
+    userCardLayout->addWidget(nameLabel);
+
+    // 메뉴 섹션
+    QLabel *menuSection = new QLabel("MENU");
+    menuSection->setStyleSheet(AppStyle::SIDEBAR_SECTION);
+    menuSection->setContentsMargins(8, 0, 0, 0);
+
+    btnHome           = new QPushButton(" 홈");
+    btnNewAccount     = new QPushButton(" 신규계좌 관리");
+    btnMyInfo         = new QPushButton(" 내 정보");
+    btnAccountProcess = new QPushButton(" 계좌 처리");
+
+    btnHome->setIcon(QIcon(":/resources/home_btn.png"));
+    btnNewAccount->setIcon(QIcon(":/resources/new_account_btn.png"));
+    btnMyInfo->setIcon(QIcon(":/resources/myinfopage_btn.png"));
+    btnAccountProcess->setIcon(QIcon(":/resources/accountprocesspage_btn.png"));
 
     QList<QPushButton*> menuButtons;
     menuButtons << btnHome << btnNewAccount << btnMyInfo << btnAccountProcess;
 
-    for (int i = 0; i < menuButtons.size(); i++) {
-        menuButtons[i]->setMinimumHeight(48);
-        menuButtons[i]->setCursor(Qt::PointingHandCursor);
-        menuButtons[i]->setStyleSheet(AppStyle::SIDEBAR_BTN);
+    for (QPushButton *btn : menuButtons) {
+        btn->setMinimumHeight(46);
+        btn->setIconSize(QSize(22, 22));
+        btn->setCursor(Qt::PointingHandCursor);
+        btn->setStyleSheet(AppStyle::SIDEBAR_BTN);
     }
 
-    // 로그아웃 버튼 (팀원2 추가)
+    // 로그아웃 버튼
     btnLogout = new QPushButton("로그아웃");
     btnLogout->setCursor(Qt::PointingHandCursor);
-    btnLogout->setMinimumHeight(35);
-    btnLogout->setStyleSheet(AppStyle::BTN_RED);
+    btnLogout->setMinimumHeight(40);
+    btnLogout->setStyleSheet(AppStyle::SIDEBAR_LOGOUT);
 
     sideLayout->addWidget(logoLabel);
-    sideLayout->addWidget(userLabel);
-    sideLayout->addSpacing(5);
-    sideLayout->addWidget(btnLogout);
-    sideLayout->addSpacing(10);
-    sideLayout->addWidget(line);
-    sideLayout->addSpacing(10);
+    sideLayout->addWidget(logoSub);
+    sideLayout->addSpacing(20);
+    sideLayout->addWidget(userCard);
+    sideLayout->addSpacing(20);
+    sideLayout->addWidget(menuSection);
+    sideLayout->addSpacing(4);
     sideLayout->addWidget(btnHome);
     sideLayout->addWidget(btnNewAccount);
     sideLayout->addWidget(btnMyInfo);
     sideLayout->addWidget(btnAccountProcess);
     sideLayout->addStretch();
+    sideLayout->addWidget(btnLogout);
 
-    // 오른쪽 페이지 영역
+    // ── 오른쪽 페이지 영역 ────────────────────────────────────────────────────
     stackedWidget = new QStackedWidget;
-    stackedWidget->setStyleSheet(
-        "QStackedWidget {"
-        "   background-color: #F5F7FB;"
-        "}"
-        );
+    stackedWidget->setStyleSheet("QStackedWidget { background-color: #F2F4F6; }");
 
-    // 홈 화면
-    pageHome = new HomePage(this);
-
-    // 신규계좌 관리 화면
-    pageNewAccount = new NewAccountPage(this);
-
-    // 내정보 화면
-    pageMyInfo = new MyInfoPage(this);
-
-    // 계좌처리 화면 (팀원 모듈)
+    pageHome          = new HomePage(this);
+    pageNewAccount    = new NewAccountPage(this);
+    pageMyInfo        = new MyInfoPage(this);
     pageAccountProcess = new AccountProcessPage(this);
 
     stackedWidget->addWidget(pageHome);
@@ -123,11 +138,11 @@ MainWindow::MainWindow(QWidget *parent)
     mainLayout->addWidget(sideMenuWidget);
     mainLayout->addWidget(stackedWidget);
 
-    connect(btnHome, SIGNAL(clicked()), this, SLOT(goHome()));
-    connect(btnNewAccount, SIGNAL(clicked()), this, SLOT(goNewAccount()));
-    connect(btnMyInfo, SIGNAL(clicked()), this, SLOT(goMyInfo()));
+    connect(btnHome,           SIGNAL(clicked()), this, SLOT(goHome()));
+    connect(btnNewAccount,     SIGNAL(clicked()), this, SLOT(goNewAccount()));
+    connect(btnMyInfo,         SIGNAL(clicked()), this, SLOT(goMyInfo()));
     connect(btnAccountProcess, SIGNAL(clicked()), this, SLOT(goAccountProcess()));
-    connect(btnLogout, &QPushButton::clicked, this, &MainWindow::onLogoutClicked);
+    connect(btnLogout, SIGNAL(clicked()), this, SLOT(onLogoutClicked()));
 
     stackedWidget->setCurrentWidget(pageHome);
     updateMenuStyle(btnHome);
@@ -142,11 +157,9 @@ void MainWindow::updateMenuStyle(QPushButton *selectedButton)
     QList<QPushButton*> menuButtons;
     menuButtons << btnHome << btnNewAccount << btnMyInfo << btnAccountProcess;
 
-    for (int i = 0; i < menuButtons.size(); i++) {
-        if (menuButtons[i] == selectedButton)
-            menuButtons[i]->setStyleSheet(AppStyle::SIDEBAR_BTN_ACTIVE);
-        else
-            menuButtons[i]->setStyleSheet(AppStyle::SIDEBAR_BTN);
+    for (QPushButton *btn : menuButtons) {
+        const bool active = (btn == selectedButton);
+        btn->setStyleSheet(active ? AppStyle::SIDEBAR_BTN_ACTIVE : AppStyle::SIDEBAR_BTN);
     }
 }
 
@@ -173,7 +186,6 @@ void MainWindow::goAccountProcess()
 {
     stackedWidget->setCurrentWidget(pageAccountProcess);
     updateMenuStyle(btnAccountProcess);
-
 }
 
 void MainWindow::onLogoutClicked()
@@ -182,7 +194,6 @@ void MainWindow::onLogoutClicked()
     request["type"]  = "logout";
     request["token"] = SessionContext::instance().token();
     request["data"]  = QJsonObject{};
-
     NetworkClient::instance()->sendRequest(request);
 
     SessionContext::instance().clear();

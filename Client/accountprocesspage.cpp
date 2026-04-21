@@ -95,11 +95,7 @@ void AccountProcessPage::setupLeftPanel()
     leftLayout->setSpacing(15);
 
     m_titleLabel = new QLabel("계좌 조회", m_leftCard);
-    m_titleLabel->setStyleSheet(
-        "font-size: 24px;"
-        "font-weight: 700;"
-        "color: #111827;"
-        );
+    m_titleLabel->setStyleSheet(AppStyle::LABEL_TITLE);
 
     m_searchEdit = new QLineEdit(m_leftCard);
     m_searchEdit->setPlaceholderText("계좌번호로 검색");
@@ -112,27 +108,16 @@ void AccountProcessPage::setupLeftPanel()
     m_searchResultList->setStyleSheet(AppStyle::LIST);
 
     m_accountNumberLabel = new QLabel("계좌번호 : -", m_leftCard);
-    m_accountNumberLabel->setStyleSheet(
-        "font-size: 16px;"
-        "font-weight: 600;"
-        "color: #374151;"
-        );
+    m_accountNumberLabel->setStyleSheet(AppStyle::LABEL_SUBTITLE);
 
     m_balanceLabel = new QLabel("잔액 : 0원", m_leftCard);
     m_balanceLabel->setStyleSheet(
-        "font-size: 18px;"
-        "font-weight: 700;"
-        "color: #2563EB;"
-        );
+        "font-size: 20px; font-weight: 800; color: #3182F6; border: none;");
 
     QLabel *historyHeader = new QLabel("입/출   |   계좌번호   |   금액 / 설명", m_leftCard);
     historyHeader->setStyleSheet(
-        "font-size: 14px;"
-        "font-weight: 700;"
-        "color: #111827;"
-        "padding: 8px 0;"
-        "border-bottom: 1px solid #E5E7EB;"
-        );
+        "font-size: 13px; font-weight: 700; color: #4E5968;"
+        "padding: 8px 0; border-bottom: 1px solid #E5E8EB;");
 
     QScrollArea *scrollArea = new QScrollArea(m_leftCard);
     scrollArea->setWidgetResizable(true);
@@ -152,12 +137,8 @@ void AccountProcessPage::setupLeftPanel()
 
     m_totalLabel = new QLabel(m_leftCard);
     m_totalLabel->setStyleSheet(
-        "font-size: 14px;"
-        "font-weight: 700;"
-        "color: #374151;"
-        "padding-top: 8px;"
-        "border-top: 1px solid #E5E7EB;"
-        );
+        "font-size: 13px; font-weight: 700; color: #4E5968;"
+        "padding-top: 8px; border-top: 1px solid #E5E8EB;");
 
     leftLayout->addWidget(m_titleLabel);
     leftLayout->addWidget(m_searchEdit);
@@ -183,11 +164,7 @@ void AccountProcessPage::setupRightPanel()
     rightLayout->setSpacing(14);
 
     m_detailTitleLabel = new QLabel("계좌 상세 / 입출금", m_rightCard);
-    m_detailTitleLabel->setStyleSheet(
-        "font-size: 22px;"
-        "font-weight: 700;"
-        "color: #111827;"
-        );
+    m_detailTitleLabel->setStyleSheet(AppStyle::LABEL_TITLE);
 
     m_detailAccountCombo = new QComboBox(m_rightCard);
     m_detailAccountCombo->setFixedHeight(40);
@@ -196,7 +173,7 @@ void AccountProcessPage::setupRightPanel()
     QWidget *detailBox = new QWidget(m_rightCard);
     detailBox->setStyleSheet(
         "QWidget { background: transparent; }"
-        "QLabel { color: #374151; background: transparent; }"
+        "QLabel { color: #4E5968; background: transparent; border: none; font-size: 13px; font-weight: 600; }"
         );
 
     QGridLayout *grid = new QGridLayout(detailBox);
@@ -293,14 +270,8 @@ void AccountProcessPage::setupRightPanel()
     connect(m_withdrawRadio, SIGNAL(clicked(bool)),
             this, SLOT(onWithdrawRadioClicked(bool)));
 
-    connect(m_accountPasswordEdit, &QLineEdit::returnPressed, this, [this]() {
-        if (!m_rightAccountNumber.isEmpty()) {
-            QString pw = m_accountPasswordEdit->text().trimmed();
-            if (!pw.isEmpty()) {
-                loadAccountDetail(m_rightAccountNumber, pw);
-            }
-        }
-    });
+    connect(m_accountPasswordEdit, SIGNAL(returnPressed()),
+            this, SLOT(onPasswordReturnPressed()));
 }
 
 void AccountProcessPage::showEvent(QShowEvent *event)
@@ -473,13 +444,9 @@ void AccountProcessPage::addHistoryLabel(const QString &type, const QString &acc
         );
 
     historyLabel->setStyleSheet(
-        "font-size: 13px;"
-        "color: #374151;"
-        "background-color: #F9FAFB;"
-        "border: 1px solid #E5E7EB;"
-        "border-radius: 8px;"
-        "padding: 8px;"
-        );
+        "font-size: 13px; color: #191F28;"
+        "background-color: #F9FAFB; border: 1px solid #E5E8EB;"
+        "border-radius: 8px; padding: 8px 12px;");
 
     m_historyLayout->insertWidget(m_historyLayout->count() - 1, historyLabel);
     m_historyCount++;
@@ -532,6 +499,15 @@ void AccountProcessPage::fillSearchResults(const QString &keyword)
     }
 
     m_searchResultList->setVisible(m_searchResultList->count() > 0);
+}
+
+void AccountProcessPage::onPasswordReturnPressed()
+{
+    if (!m_rightAccountNumber.isEmpty()) {
+        const QString pw = m_accountPasswordEdit->text().trimmed();
+        if (!pw.isEmpty())
+            loadAccountDetail(m_rightAccountNumber, pw);
+    }
 }
 
 void AccountProcessPage::onSearchTextChanged(const QString &text)

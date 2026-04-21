@@ -27,6 +27,7 @@ private slots:
     void onConnected();
     void onDisconnected();
     void onSocketError(QAbstractSocket::SocketError error);
+    void reconnect();
 
 private:
     explicit NetworkClient(QObject* parent = nullptr);

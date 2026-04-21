@@ -33,6 +33,15 @@ qt_add_executable(BankClient
 
 )
 
+qt_add_resources(BankClient "app_resources"
+    PREFIX "/"
+    FILES
+        resources/home_btn.png
+        resources/new_account_btn.png
+        resources/myinfopage_btn.png
+        resources/accountprocesspage_btn.png
+)
+
 qt_add_translations(
     TARGETS BankClient
     TS_FILES BankClient_ko_KR.ts
