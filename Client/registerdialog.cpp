@@ -21,15 +21,10 @@ RegisterDialog::RegisterDialog(QWidget *parent)
     setFixedSize(480, 590);
     setModal(true);
 
-    // 서버 응답을 이 다이얼로그에서 처리
-    connect(NetworkClient::instance(), &NetworkClient::responseReceived,
-            this, &RegisterDialog::onNetworkResponse);
-    connect(NetworkClient::instance(), &NetworkClient::errorOccurred,
-            this, [this](const QString& msg) {
-                QMessageBox::critical(this, tr("네트워크 오류"), msg);
-                m_confirmBtn->setEnabled(true);
-                m_dupCheckBtn->setEnabled(true);
-            });
+    connect(NetworkClient::instance(), SIGNAL(responseReceived(QJsonObject)),
+            this, SLOT(onNetworkResponse(QJsonObject)));
+    connect(NetworkClient::instance(), SIGNAL(errorOccurred(QString)),
+            this, SLOT(onNetworkError(QString)));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -84,20 +79,20 @@ void RegisterDialog::setupUI()
     m_birthEdit->setMaximumDate(QDate::currentDate());  // 오늘까지만 선택 가능
     m_birthEdit->setCalendarPopup(true);                // ← 클릭 시 달력 팝업 활성화
 
-    // 달력 위젯 스타일 커스터마이징
+    // 달력 위젯 스타일 커스터마이징 (라이트 테마)
     QCalendarWidget *calendar = m_birthEdit->calendarWidget();
-    calendar->setGridVisible(true);
+    calendar->setGridVisible(false);
     calendar->setHorizontalHeaderFormat(QCalendarWidget::ShortDayNames);
     calendar->setStyleSheet(R"(
         QCalendarWidget {
-            background-color: #1e293b;
-            color: #f1f5f9;
+            background-color: #FFFFFF;
+            color: #191F28;
             font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
             font-size: 12px;
         }
         QCalendarWidget QToolButton {
-            background-color: #334155;
-            color: #f1f5f9;
+            background-color: #F2F4F6;
+            color: #191F28;
             border: none;
             border-radius: 6px;
             padding: 4px 10px;
@@ -105,49 +100,38 @@ void RegisterDialog::setupUI()
             font-weight: 600;
         }
         QCalendarWidget QToolButton:hover {
-            background-color: #6366f1;
+            background-color: #3182F6;
+            color: white;
         }
-        QCalendarWidget QToolButton::menu-indicator {
-            image: none;
-        }
+        QCalendarWidget QToolButton::menu-indicator { image: none; }
         QCalendarWidget QSpinBox {
-            background-color: #0f172a;
-            color: #f1f5f9;
-            border: 1px solid #334155;
+            background-color: #F9FAFB;
+            color: #191F28;
+            border: 1px solid #E5E8EB;
             border-radius: 4px;
             padding: 2px 6px;
             font-size: 12px;
         }
-        QCalendarWidget QSpinBox::up-button,
-        QCalendarWidget QSpinBox::down-button {
-            subcontrol-origin: border;
-            width: 16px;
-            background-color: #334155;
-        }
         QCalendarWidget QWidget#qt_calendar_navigationbar {
-            background-color: #0f172a;
+            background-color: #F9FAFB;
             padding: 6px;
-            border-radius: 8px;
+            border-bottom: 1px solid #E5E8EB;
         }
         QCalendarWidget QAbstractItemView {
-            background-color: #1e293b;
-            color: #f1f5f9;
-            selection-background-color: #6366f1;
-            selection-color: #ffffff;
-            gridline-color: #334155;
+            background-color: #FFFFFF;
+            color: #191F28;
+            selection-background-color: #3182F6;
+            selection-color: #FFFFFF;
+            gridline-color: #F2F4F6;
             font-size: 12px;
         }
-        QCalendarWidget QAbstractItemView:disabled {
-            color: #475569;
-        }
+        QCalendarWidget QAbstractItemView:disabled { color: #B0B8C1; }
         QCalendarWidget QMenu {
-            background-color: #1e293b;
-            color: #f1f5f9;
-            border: 1px solid #334155;
+            background-color: #FFFFFF;
+            color: #191F28;
+            border: 1px solid #E5E8EB;
         }
-        QCalendarWidget QMenu::item:selected {
-            background-color: #6366f1;
-        }
+        QCalendarWidget QMenu::item:selected { background-color: #3182F6; color: white; }
     )");
 
     cardLayout->addWidget(m_birthLabel);
@@ -221,10 +205,10 @@ void RegisterDialog::setupUI()
     rootLayout->addWidget(m_card);
 
     // ── 시그널 연결 ───────────────────────────────────────────────────────────
-    connect(m_dupCheckBtn, &QPushButton::clicked,   this, &RegisterDialog::onDuplicateCheckClicked);
-    connect(m_confirmBtn,  &QPushButton::clicked,   this, &RegisterDialog::onConfirmClicked);
-    connect(m_cancelBtn,   &QPushButton::clicked,   this, &RegisterDialog::onCancelClicked);
-    connect(m_idEdit,      &QLineEdit::textChanged, this, &RegisterDialog::onIdTextChanged);
+    connect(m_dupCheckBtn, SIGNAL(clicked()),          this, SLOT(onDuplicateCheckClicked()));
+    connect(m_confirmBtn,  SIGNAL(clicked()),          this, SLOT(onConfirmClicked()));
+    connect(m_cancelBtn,   SIGNAL(clicked()),          this, SLOT(onCancelClicked()));
+    connect(m_idEdit,      SIGNAL(textChanged(QString)), this, SLOT(onIdTextChanged()));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -236,82 +220,68 @@ void RegisterDialog::applyStyles()
 
     m_card->setStyleSheet(
         "#regCard { " + AppStyle::DARK_CARD_BODY + " }"
-        "#titleLabel { color: #f8fafc; font-size: 20px; font-weight: 700;"
-        "  font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; }"
+        "#titleLabel { color: #191F28; font-size: 22px; font-weight: 800; }"
         + AppStyle::DARK_FIELD_LABEL
         + AppStyle::DARK_INPUT
         + R"(
-
-        /* ── QDateEdit 달력 버튼 ── */
         QDateEdit#dateField {
-            background-color: #0f172a;
-            border: 1.5px solid #334155;
-            border-radius: 8px;
-            color: #f1f5f9;
-            font-size: 13px;
+            background-color: #F9FAFB;
+            border: 1.5px solid #E5E8EB;
+            border-radius: 10px;
+            color: #191F28;
+            font-size: 14px;
             padding: 0 12px;
-            font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
         }
         QDateEdit#dateField:focus {
-            border: 1.5px solid #6366f1;
-            background-color: #1a2540;
+            border: 1.5px solid #3182F6;
+            background-color: white;
         }
         QDateEdit#dateField::drop-down {
             subcontrol-origin: border;
             subcontrol-position: right center;
             width: 32px;
-            border-left: 1px solid #334155;
-            border-top-right-radius: 8px;
-            border-bottom-right-radius: 8px;
-            background-color: #334155;
+            border-left: 1px solid #E5E8EB;
+            border-top-right-radius: 10px;
+            border-bottom-right-radius: 10px;
+            background-color: #F2F4F6;
         }
         QDateEdit#dateField::down-arrow {
             image: none;
-            width: 0;
-            height: 0;
+            width: 0; height: 0;
             border-left: 5px solid transparent;
             border-right: 5px solid transparent;
-            border-top: 6px solid #94a3b8;
+            border-top: 6px solid #4E5968;
         }
-
-        /* ── 중복확인 버튼 ── */
         QPushButton#dupCheckBtn {
-            background-color: #334155;
-            color: #94a3b8;
-            border: 1.5px solid #475569;
-            border-radius: 8px;
+            background-color: #F2F4F6;
+            color: #4E5968;
+            border: 1.5px solid #E5E8EB;
+            border-radius: 10px;
             font-size: 12px;
             font-weight: 600;
-            font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
         }
-        QPushButton#dupCheckBtn:hover  { background-color: #475569; color: #f1f5f9; }
-        QPushButton#dupCheckBtn:pressed { background-color: #1e293b; }
-
-        /* ── 가입 완료 버튼 ── */
+        QPushButton#dupCheckBtn:hover { background-color: #E5E8EB; color: #191F28; }
+        QPushButton#dupCheckBtn:pressed { background-color: #D1D6DB; }
         QPushButton#confirmBtn {
-            background-color: #6366f1;
-            color: #ffffff;
+            background-color: #3182F6;
+            color: white;
             border: none;
-            border-radius: 9px;
+            border-radius: 12px;
             font-size: 14px;
             font-weight: 700;
-            font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
         }
-        QPushButton#confirmBtn:hover  { background-color: #818cf8; }
-        QPushButton#confirmBtn:pressed { background-color: #4f46e5; }
-
-        /* ── 취소 버튼 ── */
+        QPushButton#confirmBtn:hover { background-color: #1B64DA; }
+        QPushButton#confirmBtn:pressed { background-color: #1B56BC; }
+        QPushButton#confirmBtn:disabled { background-color: #B0C8F0; }
         QPushButton#cancelBtn {
-            background-color: transparent;
-            color: #f87171;
-            border: 1.5px solid #f87171;
-            border-radius: 9px;
+            background-color: #F2F4F6;
+            color: #4E5968;
+            border: 1px solid #E5E8EB;
+            border-radius: 12px;
             font-size: 14px;
-            font-weight: 700;
-            font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+            font-weight: 600;
         }
-        QPushButton#cancelBtn:hover  { background-color: rgba(248,113,113,0.12); }
-        QPushButton#cancelBtn:pressed { background-color: rgba(248,113,113,0.25); }
+        QPushButton#cancelBtn:hover { background-color: #E5E8EB; color: #191F28; }
     )");
 }
 
@@ -321,22 +291,16 @@ void RegisterDialog::applyStyles()
 void RegisterDialog::setIdBorderColor(const QString &color)
 {
     m_idEdit->setStyleSheet(
-        QString(R"(
-            QLineEdit {
-                background-color: #0f172a;
-                border: 1.5px solid %1;
-                border-radius: 8px;
-                color: #f1f5f9;
-                font-size: 13px;
-                padding: 0 12px;
-                font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
-            }
-            QLineEdit:focus {
-                background-color: #1a2540;
-                border: 1.5px solid %1;
-            }
-        )").arg(color)
-        );
+        QString(
+            "QLineEdit {"
+            "  background-color: #F9FAFB; border: 1.5px solid %1;"
+            "  border-radius: 10px; color: #191F28; font-size: 14px; padding: 0 14px;"
+            "}"
+            "QLineEdit:focus {"
+            "  background-color: white; border: 1.5px solid %1;"
+            "}"
+        ).arg(color)
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -345,7 +309,7 @@ void RegisterDialog::setIdBorderColor(const QString &color)
 void RegisterDialog::onIdTextChanged()
 {
     m_idChecked = false;
-    setIdBorderColor("#334155");
+    setIdBorderColor("#E5E8EB");
 }
 
 void RegisterDialog::onDuplicateCheckClicked()
@@ -441,11 +405,11 @@ void RegisterDialog::onNetworkResponse(const QJsonObject& resp)
         m_dupCheckBtn->setEnabled(true);
         if (status == "success") {
             m_idChecked = true;
-            setIdBorderColor("#10b981");
+            setIdBorderColor("#00C896");
             QMessageBox::information(this, tr("중복 확인"), msg);
         } else {
             m_idChecked = false;
-            setIdBorderColor("#f87171");
+            setIdBorderColor("#F04452");
             QMessageBox::warning(this, tr("중복 확인"), msg);
         }
     } else if (type == "register_response") {
@@ -457,6 +421,13 @@ void RegisterDialog::onNetworkResponse(const QJsonObject& resp)
             QMessageBox::warning(this, tr("회원가입 실패"), msg);
         }
     }
+}
+
+void RegisterDialog::onNetworkError(const QString& message)
+{
+    QMessageBox::critical(this, tr("네트워크 오류"), message);
+    m_confirmBtn->setEnabled(true);
+    m_dupCheckBtn->setEnabled(true);
 }
 
 void RegisterDialog::onCancelClicked()

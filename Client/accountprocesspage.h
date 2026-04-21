@@ -39,6 +39,7 @@ private slots:
     void onWithdrawRadioClicked(bool checked);
     void onSearchTextChanged(const QString &text);
     void onSearchResultClicked(QListWidgetItem *item);
+    void onPasswordReturnPressed();
 
 private:
     void setupUI();

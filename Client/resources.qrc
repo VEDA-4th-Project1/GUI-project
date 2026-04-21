@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>resources/home_btn.png</file>
+        <file>resources/new_account_btn.png</file>
+        <file>resources/myinfopage_btn.png</file>
+        <file>resources/accountprocesspage_btn.png</file>
+    </qresource>
+</RCC>

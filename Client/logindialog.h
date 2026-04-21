@@ -20,9 +20,8 @@ private slots:
     void onRegisterClicked();
     void onConfirmClicked();
     void onCancelClicked();
-
-    // 서버 응답 처리 (login_response)
     void onNetworkResponse(const QJsonObject& response);
+    void onNetworkError(const QString& message);
 
 private:
     void setupUI();

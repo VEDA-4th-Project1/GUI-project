@@ -13,10 +13,10 @@ NetworkClient* NetworkClient::instance() {
 
 NetworkClient::NetworkClient(QObject* parent) : QObject(parent) {
     m_socket = new QTcpSocket(this);
-    connect(m_socket, &QTcpSocket::connected,          this, &NetworkClient::onConnected);
-    connect(m_socket, &QTcpSocket::disconnected,       this, &NetworkClient::onDisconnected);
-    connect(m_socket, &QTcpSocket::readyRead,          this, &NetworkClient::onReadyRead);
-    connect(m_socket, &QAbstractSocket::errorOccurred, this, &NetworkClient::onSocketError);
+    connect(m_socket, SIGNAL(connected()),                                      this, SLOT(onConnected()));
+    connect(m_socket, SIGNAL(disconnected()),                                   this, SLOT(onDisconnected()));
+    connect(m_socket, SIGNAL(readyRead()),                                      this, SLOT(onReadyRead()));
+    connect(m_socket, SIGNAL(errorOccurred(QAbstractSocket::SocketError)),      this, SLOT(onSocketError(QAbstractSocket::SocketError)));
 }
 
 void NetworkClient::connectToServer(const QString& host, quint16 port) {
@@ -64,7 +64,11 @@ void NetworkClient::onConnected() {
 void NetworkClient::onDisconnected() {
     emit disconnectedFromServer();
     if (!m_host.isEmpty())
-        QTimer::singleShot(1500, this, [this]{ connectToServer(m_host, m_port); });
+        QTimer::singleShot(1500, this, SLOT(reconnect()));
+}
+
+void NetworkClient::reconnect() {
+    connectToServer(m_host, m_port);
 }
 
 // TCP 스트림 수신: '\n' 구분자로 메시지 분리 후 responseReceived 발생

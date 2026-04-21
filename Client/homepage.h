@@ -5,6 +5,7 @@
 #include <QJsonObject>
 
 class QLabel;
+class QFrame;
 
 class HomePage : public QWidget
 {
@@ -22,7 +23,7 @@ private slots:
 private:
     void loadTotalBalance();
 
-    QLabel *m_labelWelcome;
+    QFrame *m_heroCard;
     QLabel *m_labelMoney;
 };
 
