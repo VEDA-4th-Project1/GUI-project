@@ -82,14 +82,20 @@ void LoginDialog::setupUI()
     m_registerBtn = new QPushButton(tr("회원가입"), m_loginCard);
     m_registerBtn->setObjectName("registerBtn");
     m_registerBtn->setFixedHeight(44);
+    m_registerBtn->setAutoDefault(false);
+    m_registerBtn->setDefault(false);
 
-    m_confirmBtn = new QPushButton(tr("O  확인"), m_loginCard);
+    m_confirmBtn = new QPushButton(tr("확인"), m_loginCard);
     m_confirmBtn->setObjectName("confirmBtn");
     m_confirmBtn->setFixedHeight(48);
+    m_confirmBtn->setAutoDefault(true);
+    m_confirmBtn->setDefault(true);
 
-    m_cancelBtn = new QPushButton(tr("X  취소"), m_loginCard);
+    m_cancelBtn = new QPushButton(tr("취소"), m_loginCard);
     m_cancelBtn->setObjectName("cancelBtn");
     m_cancelBtn->setFixedHeight(48);
+    m_cancelBtn->setAutoDefault(false);
+    m_cancelBtn->setDefault(false);
 
     QHBoxLayout *actionRow = new QHBoxLayout();
     actionRow->setSpacing(10);

@@ -44,6 +44,25 @@ static const QString S_BTN_GRAY =
     " border-radius: 8px; font-size: 13px; font-weight: bold; }"
     "QPushButton:hover { background-color: #4B5563; }";
 
+static const QString S_MSGBOX =
+    "QMessageBox { background-color: white; }"
+    "QMessageBox QLabel { color: #111827; font-size: 14px; background-color: transparent; }"
+    "QMessageBox QPushButton {"
+    "  background-color: #2563EB; color: white; border: none;"
+    "  border-radius: 6px; padding: 6px 18px; font-size: 13px; font-weight: bold;"
+    "  min-width: 70px;"
+    "}"
+    "QMessageBox QPushButton:hover { background-color: #1D4ED8; }";
+
+static int showMsg(QWidget *parent, QMessageBox::Icon icon,
+                   const QString &title, const QString &text,
+                   QMessageBox::StandardButtons btns = QMessageBox::Ok)
+{
+    QMessageBox box(icon, title, text, btns, parent);
+    box.setStyleSheet(S_MSGBOX);
+    return box.exec();
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 MyInfoPage::MyInfoPage(QWidget *parent) : QWidget(parent)
@@ -55,7 +74,7 @@ MyInfoPage::MyInfoPage(QWidget *parent) : QWidget(parent)
 
 void MyInfoPage::setupUI()
 {
-    setStyleSheet("background-color: #F5F7FB;");
+    setStyleSheet("MyInfoPage { background-color: #F5F7FB; }");
 
     QVBoxLayout *root = new QVBoxLayout(this);
     root->setContentsMargins(40, 40, 40, 40);
@@ -197,15 +216,15 @@ void MyInfoPage::openChangePasswordDialog()
     connect(btnCancel, &QPushButton::clicked, dlg, &QDialog::reject);
     connect(btnOk, &QPushButton::clicked, dlg, [=]() {
         if (currentPwEdit->text().isEmpty() || newPwEdit->text().isEmpty()) {
-            QMessageBox::warning(dlg, "오류", "모든 항목을 입력해주세요.");
+            showMsg(dlg, QMessageBox::Warning, "오류", "모든 항목을 입력해주세요.");
             return;
         }
         if (newPwEdit->text().length() < 6) {
-            QMessageBox::warning(dlg, "오류", "새 비밀번호는 6자 이상이어야 합니다.");
+            showMsg(dlg, QMessageBox::Warning, "오류", "새 비밀번호는 6자 이상이어야 합니다.");
             return;
         }
         if (newPwEdit->text() != confirmPwEdit->text()) {
-            QMessageBox::warning(dlg, "오류", "새 비밀번호가 일치하지 않습니다.");
+            showMsg(dlg, QMessageBox::Warning, "오류", "새 비밀번호가 일치하지 않습니다.");
             return;
         }
 
@@ -231,7 +250,7 @@ void MyInfoPage::openChangePasswordDialog()
 void MyInfoPage::openCloseAccountDialog()
 {
     if (m_accountList.isEmpty()) {
-        QMessageBox::information(this, "알림", "해지할 계좌가 없습니다.");
+        showMsg(this, QMessageBox::Information, "알림", "해지할 계좌가 없습니다.");
         return;
     }
 
@@ -289,7 +308,7 @@ void MyInfoPage::openCloseAccountDialog()
 
     connect(btnOk, &QPushButton::clicked, dlg, [=]() {
         if (pwEdit->text().isEmpty()) {
-            QMessageBox::warning(dlg, "오류", "계좌 비밀번호를 입력해주세요.");
+            showMsg(dlg, QMessageBox::Warning, "오류", "계좌 비밀번호를 입력해주세요.");
             return;
         }
 
@@ -297,9 +316,9 @@ void MyInfoPage::openCloseAccountDialog()
         QString selectedText = combo->currentText();
         QString accountNumber = selectedText.left(selectedText.indexOf(" ("));
 
-        auto reply = QMessageBox::question(dlg, "계좌 해지",
-                                           QString("계좌 [%1]을 정말 해지하시겠습니까?").arg(accountNumber),
-                                           QMessageBox::Yes | QMessageBox::No);
+        int reply = showMsg(dlg, QMessageBox::Question, "계좌 해지",
+                            QString("계좌 [%1]을 정말 해지하시겠습니까?").arg(accountNumber),
+                            QMessageBox::Yes | QMessageBox::No);
         if (reply != QMessageBox::Yes) return;
 
         // 버튼 비활성화 (중복 클릭 방지)
@@ -358,17 +377,17 @@ void MyInfoPage::onNetworkResponse(const QJsonObject &resp)
 
     else if (type == "change_password_response") {
         if (status == "success")
-            QMessageBox::information(this, "완료", "비밀번호가 변경되었습니다.");
+            showMsg(this, QMessageBox::Information, "완료", "비밀번호가 변경되었습니다.");
         else
-            QMessageBox::critical(this, "실패", resp["message"].toString());
+            showMsg(this, QMessageBox::Critical, "실패", resp["message"].toString());
     }
 
     else if (type == "close_account_response") {
         if (status == "success") {
-            QMessageBox::information(this, "완료", "계좌가 해지되었습니다.");
+            showMsg(this, QMessageBox::Information, "완료", "계좌가 해지되었습니다.");
             loadUserInfo();  // 목록 새로고침 (계좌 제거 확인)
         } else {
-            QMessageBox::critical(this, "실패", resp["message"].toString());
+            showMsg(this, QMessageBox::Critical, "실패", resp["message"].toString());
         }
     }
 }
