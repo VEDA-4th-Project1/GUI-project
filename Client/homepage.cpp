@@ -4,6 +4,7 @@
 
 #include <QVBoxLayout>
 #include <QLabel>
+#include <QFrame>
 #include <QShowEvent>
 #include <QJsonObject>
 #include <QJsonArray>
@@ -11,15 +12,22 @@
 HomePage::HomePage(const QString &userName, QWidget *parent)
     : QWidget(parent), m_userName(userName)
 {
+    setStyleSheet(
+        "background-color: #F5F7FB;"
+        "QLabel { color: #111827; background: transparent; border: none; }"
+        );
+
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->setContentsMargins(40, 40, 40, 40);
     layout->setSpacing(20);
 
-    QWidget *card = new QWidget(this);
+    QFrame *card = new QFrame(this);
     card->setStyleSheet(
-        "background-color: white;"
-        "border-radius: 20px;"
-        "border: 1px solid #E5E7EB;"
+        "QFrame {"
+        " background-color: white;"
+        " border-radius: 20px;"
+        " border: 1px solid #E5E7EB;"
+        "}"
         );
 
     QVBoxLayout *cardLayout = new QVBoxLayout(card);
