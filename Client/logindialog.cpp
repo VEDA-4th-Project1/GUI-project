@@ -195,6 +195,10 @@ void LoginDialog::onNetworkResponse(const QJsonObject& resp)
     m_confirmBtn->setEnabled(true);
 
     if (resp["status"].toString() == "success") {
+        // 로그인 성공 후 이 LoginDialog가 다시 응답을 처리하지 않도록 연결 해제
+        disconnect(NetworkClient::instance(), &NetworkClient::responseReceived,
+                   this, &LoginDialog::onNetworkResponse);
+
         QJsonObject respData = resp["data"].toObject();
         QJsonObject user     = respData["user"].toObject();
 

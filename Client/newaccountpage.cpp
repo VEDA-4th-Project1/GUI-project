@@ -9,6 +9,7 @@
 #include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QPushButton>
+#include <QFrame>
 #include <QMessageBox>
 #include <QJsonObject>
 
@@ -19,15 +20,20 @@ NewAccountPage::NewAccountPage(QWidget* parent) : QWidget(parent) {
 }
 
 void NewAccountPage::setupUI() {
+    setStyleSheet(
+        "background-color: #F5F7FB;"
+        "QLabel { color: #111827; background: transparent; border: none; }"
+    );
+
     QVBoxLayout* root = new QVBoxLayout(this);
     root->setContentsMargins(40, 40, 40, 40);
     root->setSpacing(0);
     root->addStretch();
 
     // ── 계좌 개설 카드 ────────────────────────────────────────────────────────
-    QWidget* card = new QWidget(this);
+    QFrame* card = new QFrame(this);
     card->setStyleSheet(
-        "QWidget { background-color: white; border-radius: 16px; border: 1px solid #E5E7EB; }");
+        "QFrame { background-color: white; border-radius: 16px; border: 1px solid #E5E7EB; }");
     card->setMaximumWidth(560);
 
     QVBoxLayout* cl = new QVBoxLayout(card);
@@ -175,6 +181,14 @@ void NewAccountPage::onCreateClicked() {
     NetworkClient::instance()->sendRequest(req);
 }
 
+static void showBox(QWidget *parent, QMessageBox::Icon icon,
+                    const QString &title, const QString &text)
+{
+    QMessageBox *box = new QMessageBox(icon, title, text, QMessageBox::Ok, parent);
+    box->setAttribute(Qt::WA_DeleteOnClose);
+    box->open();
+}
+
 void NewAccountPage::onNetworkResponse(const QJsonObject& resp) {
     if (resp["type"].toString() != "create_account_response") return;
 
@@ -182,11 +196,11 @@ void NewAccountPage::onNetworkResponse(const QJsonObject& resp) {
 
     if (resp["status"].toString() == "success") {
         const QString accNum = resp["data"].toObject()["accountNumber"].toString();
-        QMessageBox::information(this, "계좌 개설",
-            QString("계좌가 개설되었습니다.\n계좌번호: %1").arg(accNum));
+        showBox(this, QMessageBox::Information, "계좌 개설",
+                QString("계좌가 개설되었습니다.\n계좌번호: %1").arg(accNum));
         m_accPasswordEdit->clear();
         m_initBalanceSpin->setValue(0);
     } else {
-        QMessageBox::warning(this, "계좌 개설 실패", resp["message"].toString());
+        showBox(this, QMessageBox::Warning, "계좌 개설 실패", resp["message"].toString());
     }
 }

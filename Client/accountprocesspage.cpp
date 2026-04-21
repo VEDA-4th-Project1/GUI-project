@@ -207,14 +207,27 @@ void AccountProcessPage::setupRightPanel()
     m_selectedTypeLabel = new QLabel("-", detailBox);
     m_selectedBalanceLabel = new QLabel("0원", detailBox);
 
+    const QString inputStyle =
+        "QLineEdit, QDoubleSpinBox {"
+        " background-color: #F9FAFB; border: 1.5px solid #D1D5DB;"
+        " border-radius: 8px; color: #111827; font-size: 13px; padding: 0 10px; }"
+        "QLineEdit:focus, QDoubleSpinBox:focus {"
+        " border-color: #2563EB; background-color: white; }";
+    const QString radioStyle =
+        "QRadioButton { color: #374151; background: transparent; font-size: 13px; }"
+        "QRadioButton::indicator { width: 16px; height: 16px; }";
+
     m_accountPasswordEdit = new QLineEdit(detailBox);
     m_accountPasswordEdit->setEchoMode(QLineEdit::Password);
     m_accountPasswordEdit->setPlaceholderText("계좌 비밀번호 입력");
     m_accountPasswordEdit->setFixedHeight(38);
+    m_accountPasswordEdit->setStyleSheet(inputStyle);
 
     m_depositRadio = new QRadioButton("입금", detailBox);
     m_withdrawRadio = new QRadioButton("출금", detailBox);
     m_depositRadio->setChecked(true);
+    m_depositRadio->setStyleSheet(radioStyle);
+    m_withdrawRadio->setStyleSheet(radioStyle);
 
     QButtonGroup *group = new QButtonGroup(this);
     group->addButton(m_depositRadio);
@@ -234,10 +247,12 @@ void AccountProcessPage::setupRightPanel()
     m_amountSpin->setSingleStep(10000);
     m_amountSpin->setSuffix(" 원");
     m_amountSpin->setFixedHeight(38);
+    m_amountSpin->setStyleSheet(inputStyle);
 
     m_descriptionEdit = new QLineEdit(detailBox);
     m_descriptionEdit->setPlaceholderText("설명 입력");
     m_descriptionEdit->setFixedHeight(38);
+    m_descriptionEdit->setStyleSheet(inputStyle);
 
     m_executeBtn = new QPushButton("실행", detailBox);
     m_executeBtn->setFixedHeight(42);
@@ -421,6 +436,14 @@ void AccountProcessPage::updateTotalLabel()
     m_totalLabel->setText(QString("TOTAL : %1건").arg(m_historyCount));
 }
 
+static void showBox(QWidget *parent, QMessageBox::Icon icon,
+                    const QString &title, const QString &text)
+{
+    QMessageBox *box = new QMessageBox(icon, title, text, QMessageBox::Ok, parent);
+    box->setAttribute(Qt::WA_DeleteOnClose);
+    box->open();
+}
+
 void AccountProcessPage::onResponseReceived(const QJsonObject &response)
 {
     QString type = response["type"].toString();
@@ -428,7 +451,7 @@ void AccountProcessPage::onResponseReceived(const QJsonObject &response)
 
     if (type == "list_accounts_response") {
         if (status != "success") {
-            QMessageBox::warning(this, "오류", response["message"].toString());
+            showBox(this, QMessageBox::Warning, "오류", response["message"].toString());
             return;
         }
 
@@ -458,7 +481,6 @@ void AccountProcessPage::onResponseReceived(const QJsonObject &response)
                 selectedIndex = 0;
 
             m_accountCombo->setCurrentIndex(selectedIndex);
-            onAccountChanged(selectedIndex);
         } else {
             m_currentAccountNumber.clear();
             m_currentAccountType.clear();
@@ -476,7 +498,7 @@ void AccountProcessPage::onResponseReceived(const QJsonObject &response)
     }
     else if (type == "get_account_detail_response") {
         if (status != "success") {
-            QMessageBox::warning(this, "오류", response["message"].toString());
+            showBox(this, QMessageBox::Warning, "오류", response["message"].toString());
             return;
         }
 
@@ -507,7 +529,7 @@ void AccountProcessPage::onResponseReceived(const QJsonObject &response)
     }
     else if (type == "deposit_response" || type == "withdraw_response") {
         if (status != "success") {
-            QMessageBox::warning(this, "오류", response["message"].toString());
+            showBox(this, QMessageBox::Warning, "오류", response["message"].toString());
             return;
         }
 
@@ -523,7 +545,7 @@ void AccountProcessPage::onResponseReceived(const QJsonObject &response)
         addHistoryLabel(txType, m_currentAccountNumber,
                         QString("%1원 / %2").arg(m_amountSpin->value(), 0, 'f', 0).arg(desc));
 
-        QMessageBox::information(this, "완료", response["message"].toString());
+        showBox(this, QMessageBox::Information, "완료", response["message"].toString());
 
         m_amountSpin->setValue(0);
         m_descriptionEdit->clear();

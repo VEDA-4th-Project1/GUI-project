@@ -10,7 +10,7 @@ class QPushButton;
 class HomePage;
 class NewAccountPage;
 class AccountProcessPage;
-
+class MyInfoPage;
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -33,7 +33,7 @@ private:
 
     HomePage *pageHome;
     NewAccountPage *pageNewAccount;
-    QWidget *pageMyInfo;
+    MyInfoPage *pageMyInfo;
     AccountProcessPage *pageAccountProcess;
 
     QPushButton *btnHome;

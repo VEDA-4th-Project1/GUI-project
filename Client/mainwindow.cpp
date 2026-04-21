@@ -2,6 +2,7 @@
 #include "sessioncontext.h"
 #include "homepage.h"
 #include "newaccountpage.h"
+#include "myinfopage.h"
 #include "accountprocesspage.h"
 #include "logindialog.h"
 #include "networkclient.h"
@@ -135,20 +136,7 @@ MainWindow::MainWindow(QWidget *parent)
     pageNewAccount = new NewAccountPage(this);
 
     // 내정보 화면
-    pageMyInfo = new QWidget;
-    QVBoxLayout *myInfoLayout = new QVBoxLayout(pageMyInfo);
-    myInfoLayout->setContentsMargins(40, 40, 40, 40);
-    QWidget *myInfoCard = new QWidget;
-    myInfoCard->setStyleSheet(
-        "background-color: white;"
-        "border-radius: 20px;"
-        "border: 1px solid #E5E7EB;"
-        );
-    QVBoxLayout *myCardLayout = new QVBoxLayout(myInfoCard);
-    myCardLayout->setContentsMargins(30, 30, 30, 30);
-    myCardLayout->addWidget(new QLabel("내정보 화면"));
-    myCardLayout->addStretch();
-    myInfoLayout->addWidget(myInfoCard);
+    pageMyInfo = new MyInfoPage(this);
 
     // 계좌처리 화면 (팀원 모듈)
     pageAccountProcess = new AccountProcessPage(this);
@@ -229,6 +217,7 @@ void MainWindow::goNewAccount()
 
 void MainWindow::goMyInfo()
 {
+    pageMyInfo->loadUserInfo();
     stackedWidget->setCurrentWidget(pageMyInfo);
     updateMenuStyle(btnMyInfo);
 }
