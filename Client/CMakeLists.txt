@@ -27,10 +27,8 @@ qt_add_executable(BankClient
     networkclient.cpp
     sessioncontext.h
     sessioncontext.cpp
-
-
-
-
+    balancepiechart.h
+    balancepiechart.cpp
 )
 
 qt_add_resources(BankClient "app_resources"

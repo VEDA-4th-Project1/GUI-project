@@ -15,6 +15,8 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QDateTime>
+#include <QScrollArea>
+#include <QLocale>
 
 
 static int showMsg(QWidget *parent, QMessageBox::Icon icon,
@@ -39,23 +41,129 @@ void MyInfoPage::setupUI()
 {
     setStyleSheet("background-color: #F2F4F6;");
 
-    QVBoxLayout *root = new QVBoxLayout(this);
+    QVBoxLayout *outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->setSpacing(0);
+
+    QScrollArea *scroll = new QScrollArea(this);
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scroll->setStyleSheet(
+        "QScrollArea { background: transparent; border: none; }"
+        "QScrollBar:vertical { background: transparent; width: 8px; margin: 4px; }"
+        "QScrollBar::handle:vertical { background: #CBD5E1; border-radius: 4px; min-height: 30px; }"
+        "QScrollBar::handle:vertical:hover { background: #94A3B8; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
+        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }");
+
+    QWidget *content = new QWidget(scroll);
+    content->setStyleSheet("background-color: #F2F4F6;");
+    scroll->setWidget(content);
+    outer->addWidget(scroll);
+
+    QVBoxLayout *root = new QVBoxLayout(content);
     root->setContentsMargins(40, 40, 40, 40);
     root->setSpacing(20);
 
+    // ── 프로필 헤더 카드 (그라데이션 + 원형 아바타) ───────────────────────────
+    QFrame *header = new QFrame(content);
+    header->setStyleSheet(
+        "QFrame {"
+        "  border-radius: 18px;"
+        "  background: qlineargradient(x1:0, y1:0, x2:1, y2:1,"
+        "      stop:0 #3182F6, stop:1 #00C896);"
+        "}");
+    header->setMinimumHeight(140);
+    AppStyle::applyHeroShadow(header);
+
+    QHBoxLayout *headerLayout = new QHBoxLayout(header);
+    headerLayout->setContentsMargins(28, 24, 28, 24);
+    headerLayout->setSpacing(20);
+
+    m_avatarLabel = new QLabel("?", header);
+    m_avatarLabel->setFixedSize(72, 72);
+    m_avatarLabel->setAlignment(Qt::AlignCenter);
+    m_avatarLabel->setStyleSheet(
+        "background-color: rgba(255,255,255,0.22);"
+        "color: white;"
+        "font-size: 30px; font-weight: 800;"
+        "border-radius: 36px; border: 2px solid rgba(255,255,255,0.55);");
+
+    QVBoxLayout *headerTextCol = new QVBoxLayout();
+    headerTextCol->setSpacing(4);
+
+    QLabel *headerKicker = new QLabel("Easy Bank 회원", header);
+    headerKicker->setStyleSheet(
+        "color: rgba(255,255,255,0.8); font-size: 12px; font-weight: 700;"
+        "letter-spacing: 0.5px; background: transparent; border: none;");
+
+    m_headerNameLabel = new QLabel("-", header);
+    m_headerNameLabel->setStyleSheet(
+        "color: white; font-size: 24px; font-weight: 800;"
+        "background: transparent; border: none;");
+
+    QLabel *headerSub = new QLabel("소중한 자산을 안전하게 관리해 드립니다.", header);
+    headerSub->setStyleSheet(
+        "color: rgba(255,255,255,0.82); font-size: 13px; font-weight: 500;"
+        "background: transparent; border: none;");
+
+    headerTextCol->addStretch();
+    headerTextCol->addWidget(headerKicker);
+    headerTextCol->addWidget(m_headerNameLabel);
+    headerTextCol->addWidget(headerSub);
+    headerTextCol->addStretch();
+
+    headerLayout->addWidget(m_avatarLabel);
+    headerLayout->addLayout(headerTextCol, 1);
+
+    root->addWidget(header);
+
+    // ── 통계 카드 3개 ────────────────────────────────────────────────────────
+    auto makeStatCard = [&](const QString &title, QLabel *&valueOut) -> QFrame* {
+        QFrame *c = new QFrame(content);
+        c->setStyleSheet(AppStyle::CARD);
+        AppStyle::applyCardShadow(c);
+        QVBoxLayout *cl = new QVBoxLayout(c);
+        cl->setContentsMargins(24, 20, 24, 20);
+        cl->setSpacing(6);
+        QLabel *t = new QLabel(title, c);
+        t->setStyleSheet(
+            "color: #8B95A1; font-size: 12px; font-weight: 700;"
+            "letter-spacing: 0.3px; background: transparent; border: none;");
+        valueOut = new QLabel("-", c);
+        valueOut->setStyleSheet(
+            "color: #191F28; font-size: 22px; font-weight: 800;"
+            "background: transparent; border: none;");
+        cl->addWidget(t);
+        cl->addWidget(valueOut);
+        return c;
+    };
+
+    QHBoxLayout *statsRow = new QHBoxLayout();
+    statsRow->setSpacing(16);
+    statsRow->addWidget(makeStatCard("보유 계좌", m_statAccountsVal), 1);
+    statsRow->addWidget(makeStatCard("총 자산",    m_statTotalVal),    1);
+    statsRow->addWidget(makeStatCard("가입 경과일", m_statDaysVal),    1);
+    root->addLayout(statsRow);
+
     // ── 내 정보 카드 ──────────────────────────────────────────────────────────
-    QFrame *card = new QFrame(this);
+    QFrame *card = new QFrame(content);
     card->setStyleSheet(AppStyle::CARD);
-    card->setMaximumWidth(560);
     AppStyle::applyCardShadow(card);
 
     QVBoxLayout *cardLayout = new QVBoxLayout(card);
     cardLayout->setContentsMargins(32, 28, 32, 28);
     cardLayout->setSpacing(16);
 
-    QLabel *title = new QLabel("내 정보");
+    QLabel *title = new QLabel("기본 정보", card);
     title->setStyleSheet(AppStyle::LABEL_TITLE);
     cardLayout->addWidget(title);
+
+    QLabel *titleSub = new QLabel("회원님의 프로필 정보입니다.", card);
+    titleSub->setStyleSheet(AppStyle::LABEL_MUTED);
+    cardLayout->addWidget(titleSub);
+    cardLayout->addSpacing(6);
 
     auto makeDivider = [&]() -> QFrame* {
         QFrame *div = new QFrame;
@@ -63,25 +171,56 @@ void MyInfoPage::setupUI()
         div->setStyleSheet("background-color: #E5E8EB; border: none; max-height: 1px;");
         return div;
     };
-    cardLayout->addWidget(makeDivider());
 
-    auto addInfoRow = [&](const QString &fieldName, QLabel *&valueLabel) {
-        QHBoxLayout *row = new QHBoxLayout;
-        row->setSpacing(16);
-        QLabel *field = new QLabel(fieldName);
-        field->setStyleSheet(AppStyle::LABEL_FIELD);
-        valueLabel = new QLabel("-");
-        valueLabel->setStyleSheet("font-size: 14px; color: #191F28; border: none;");
-        row->addWidget(field);
-        row->addWidget(valueLabel, 1);
-        cardLayout->addLayout(row);
+    // 아이콘(이모지) 칩 + 라벨 + 값 구성의 카드형 행
+    auto addInfoRow = [&](const QString &icon, const QString &chipBg, const QString &chipFg,
+                          const QString &fieldName, QLabel *&valueLabel) {
+        QFrame *row = new QFrame(card);
+        row->setStyleSheet(
+            "QFrame {"
+            "  background-color: #F8FAFC;"
+            "  border: 1px solid #EEF2F6;"
+            "  border-radius: 12px;"
+            "}");
+        QHBoxLayout *rl = new QHBoxLayout(row);
+        rl->setContentsMargins(16, 12, 16, 12);
+        rl->setSpacing(14);
+
+        QLabel *iconChip = new QLabel(icon, row);
+        iconChip->setFixedSize(40, 40);
+        iconChip->setAlignment(Qt::AlignCenter);
+        iconChip->setStyleSheet(QString(
+            "background-color: %1; color: %2;"
+            "font-size: 18px; font-weight: 800;"
+            "border-radius: 20px; border: none;").arg(chipBg, chipFg));
+
+        QVBoxLayout *col = new QVBoxLayout();
+        col->setContentsMargins(0, 0, 0, 0);
+        col->setSpacing(2);
+
+        QLabel *field = new QLabel(fieldName, row);
+        field->setStyleSheet(
+            "color: #8B95A1; font-size: 12px; font-weight: 700;"
+            "letter-spacing: 0.3px; background: transparent; border: none;");
+
+        valueLabel = new QLabel("-", row);
+        valueLabel->setStyleSheet(
+            "color: #191F28; font-size: 16px; font-weight: 700;"
+            "background: transparent; border: none;");
+
+        col->addWidget(field);
+        col->addWidget(valueLabel);
+
+        rl->addWidget(iconChip);
+        rl->addLayout(col, 1);
+        cardLayout->addWidget(row);
     };
 
-    addInfoRow("아이디",  m_idLabel);
-    addInfoRow("이름",    m_nameLabel);
-    addInfoRow("가입일",  m_createdAtLabel);
+    addInfoRow("@",  "#DBEAFE", "#1D4ED8", "아이디",  m_idLabel);
+    addInfoRow("👤", "#FCE7F3", "#BE185D", "이름",    m_nameLabel);
+    addInfoRow("📅", "#DCFCE7", "#047857", "가입일",  m_createdAtLabel);
 
-    cardLayout->addSpacing(8);
+    cardLayout->addSpacing(6);
     cardLayout->addWidget(makeDivider());
     cardLayout->addSpacing(4);
 
@@ -100,18 +239,34 @@ void MyInfoPage::setupUI()
     btnRow->addWidget(btnCloseAcc);
     cardLayout->addLayout(btnRow);
 
-    // 카드를 중앙 정렬하되 가득 차면 늘어나도록
-    QHBoxLayout *centerRow = new QHBoxLayout;
-    centerRow->addStretch();
-    centerRow->addWidget(card, 1);
-    centerRow->addStretch();
+    root->addWidget(card);
 
-    root->addStretch();
-    root->addLayout(centerRow);
+    // ── 내 계좌 목록 카드 ────────────────────────────────────────────────────
+    QFrame *accCard = new QFrame(content);
+    accCard->setStyleSheet(AppStyle::CARD);
+    AppStyle::applyCardShadow(accCard);
+
+    QVBoxLayout *accLayout = new QVBoxLayout(accCard);
+    accLayout->setContentsMargins(32, 28, 32, 28);
+    accLayout->setSpacing(12);
+
+    QLabel *accTitle = new QLabel("내 계좌", accCard);
+    accTitle->setStyleSheet(AppStyle::LABEL_TITLE);
+    accLayout->addWidget(accTitle);
+    accLayout->addWidget(makeDivider());
+
+    m_accountsListBox = new QWidget(accCard);
+    m_accountsListBox->setStyleSheet("background: transparent;");
+    QVBoxLayout *listLayout = new QVBoxLayout(m_accountsListBox);
+    listLayout->setContentsMargins(0, 4, 0, 0);
+    listLayout->setSpacing(8);
+    accLayout->addWidget(m_accountsListBox);
+
+    root->addWidget(accCard);
     root->addStretch();
 
-    connect(btnChangePw, &QPushButton::clicked, this, &MyInfoPage::openChangePasswordDialog);
-    connect(btnCloseAcc, &QPushButton::clicked, this, &MyInfoPage::openCloseAccountDialog);
+    connect(btnChangePw, SIGNAL(clicked()), this, SLOT(openChangePasswordDialog()));
+    connect(btnCloseAcc, SIGNAL(clicked()), this, SLOT(openCloseAccountDialog()));
 }
 
 // ── 서버 요청 ─────────────────────────────────────────────────────────────────
@@ -320,8 +475,14 @@ void MyInfoPage::onNetworkResponse(const QJsonObject &resp)
     if (type == "get_user_info_response") {
         if (status != "success") return;
         QJsonObject user = resp["data"].toObject()["user"].toObject();
+        const QString name = user["name"].toString();
         m_idLabel->setText(user["id"].toString());
-        m_nameLabel->setText(user["name"].toString());
+        m_nameLabel->setText(name);
+
+        if (m_headerNameLabel) m_headerNameLabel->setText(name + "님");
+        if (m_avatarLabel)
+            m_avatarLabel->setText(name.isEmpty() ? "?" : name.left(1));
+
         QString rawDate = user["createdAt"].toString();
         QDateTime dt = QDateTime::fromString(rawDate, Qt::ISODate);
         if (!dt.isValid())
@@ -330,19 +491,101 @@ void MyInfoPage::onNetworkResponse(const QJsonObject &resp)
             ? dt.date().toString("yyyy년 MM월 dd일")
             : rawDate;
         m_createdAtLabel->setText(displayDate);
+
+        if (m_statDaysVal) {
+            if (dt.isValid()) {
+                qint64 days = dt.date().daysTo(QDate::currentDate());
+                m_statDaysVal->setText(QString("%1일").arg(days));
+            } else {
+                m_statDaysVal->setText("-");
+            }
+        }
     }
 
     else if (type == "list_accounts_response") {
         if (status != "success") return;
         m_accountList.clear();
+        m_totalBalance = 0.0;
         const QJsonArray accounts = resp["data"].toObject()["accounts"].toArray();
+
+        // 기존 계좌 행 제거
+        if (m_accountsListBox) {
+            QLayout *ll = m_accountsListBox->layout();
+            QLayoutItem *item;
+            while (ll && (item = ll->takeAt(0)) != nullptr) {
+                if (QWidget *w = item->widget()) w->deleteLater();
+                delete item;
+            }
+        }
+
+        QVBoxLayout *listLayout = m_accountsListBox
+            ? static_cast<QVBoxLayout*>(m_accountsListBox->layout())
+            : nullptr;
+
         for (const QJsonValue &v : accounts) {
             QJsonObject acc = v.toObject();
             QString accNum  = acc["accountNumber"].toString();
             QString accType = acc["type"].toString();
-            // 표시: "110-921-427450 (savings)" 형식
+            double  balance = acc["balance"].toDouble();
+            m_totalBalance += balance;
             m_accountList << QString("%1 (%2)").arg(accNum, accType);
+
+            if (!listLayout) continue;
+
+            QFrame *row = new QFrame(m_accountsListBox);
+            row->setStyleSheet(
+                "QFrame {"
+                "  background-color: #F8FAFC;"
+                "  border: 1px solid #E5E8EB;"
+                "  border-radius: 12px;"
+                "}");
+            QHBoxLayout *rl = new QHBoxLayout(row);
+            rl->setContentsMargins(16, 12, 16, 12);
+            rl->setSpacing(12);
+
+            QLabel *typeBadge = new QLabel(accType, row);
+            const bool savings = (accType == "savings");
+            typeBadge->setStyleSheet(QString(
+                "background-color: %1;"
+                "color: %2;"
+                "font-size: 11px; font-weight: 800;"
+                "padding: 4px 10px; border-radius: 10px; border: none;")
+                .arg(savings ? "#DBEAFE" : "#DCFCE7",
+                     savings ? "#1D4ED8" : "#047857"));
+
+            QLabel *numLabel = new QLabel(accNum, row);
+            numLabel->setStyleSheet(
+                "color: #191F28; font-size: 14px; font-weight: 700;"
+                "background: transparent; border: none;");
+
+            QLabel *balLabel = new QLabel(
+                QLocale(QLocale::Korean).toString(static_cast<qlonglong>(balance)) + "원", row);
+            balLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+            balLabel->setStyleSheet(
+                "color: #3182F6; font-size: 14px; font-weight: 800;"
+                "background: transparent; border: none;");
+
+            rl->addWidget(typeBadge);
+            rl->addWidget(numLabel);
+            rl->addStretch();
+            rl->addWidget(balLabel);
+            listLayout->addWidget(row);
         }
+
+        if (listLayout && accounts.isEmpty()) {
+            QLabel *empty = new QLabel("보유 중인 계좌가 없습니다.", m_accountsListBox);
+            empty->setAlignment(Qt::AlignCenter);
+            empty->setStyleSheet(
+                "color: #8B95A1; font-size: 13px; padding: 20px;"
+                "background: transparent; border: none;");
+            listLayout->addWidget(empty);
+        }
+
+        if (m_statAccountsVal)
+            m_statAccountsVal->setText(QString("%1개").arg(accounts.size()));
+        if (m_statTotalVal)
+            m_statTotalVal->setText(
+                QLocale(QLocale::Korean).toString(static_cast<qlonglong>(m_totalBalance)) + "원");
     }
 
     else if (type == "change_password_response") {

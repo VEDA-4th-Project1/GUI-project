@@ -6,6 +6,7 @@
 
 class QLabel;
 class QFrame;
+class BalancePieChart;
 
 class HomePage : public QWidget
 {
@@ -25,6 +26,8 @@ private:
 
     QFrame *m_heroCard;
     QLabel *m_labelMoney;
+    BalancePieChart *m_pieChart;
+    QFrame *m_legendCard;
 };
 
 #endif // HOMEPAGE_H
