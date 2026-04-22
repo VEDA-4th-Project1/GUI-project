@@ -4,7 +4,6 @@
 #include <QWidget>
 #include <QJsonArray>
 #include <QJsonObject>
-#include <QHash>
 
 class QLabel;
 class QPushButton;
@@ -37,7 +36,7 @@ class QListWidgetItem;
  * - 입금/출금 라디오 + 금액 + 설명 → 실행 버튼
  *
  * 저축계좌(savings)는 출금 라디오 버튼이 비활성화된다.
- * 비밀번호는 m_accountPasswordCache에 캐시되어 계좌 갱신 시 재사용된다.
+ * 계좌 상세 조회는 세션 토큰만으로 수행되며, 입금·출금 시에만 계좌 비밀번호가 필요하다.
  */
 class AccountProcessPage : public QWidget
 {
@@ -102,11 +101,6 @@ private slots:
      */
     void onSearchResultClicked(QListWidgetItem *item);
 
-    /**
-     * @brief 비밀번호 입력 필드에서 Enter 키 입력 시 우측 계좌 상세를 조회한다.
-     */
-    void onPasswordReturnPressed();
-
 private:
     /** setupLeftPanel()·setupRightPanel()을 호출해 전체 UI를 구성한다. */
     void setupUI();
@@ -118,18 +112,10 @@ private:
     void setupRightPanel();
 
     /**
-     * @brief 서버에 "get_account_detail" 요청을 전송한다.
+     * @brief 서버에 "get_account_detail" 요청을 전송한다. (비밀번호 불필요)
      * @param accountNumber 조회할 계좌번호
-     * @param password      계좌 비밀번호
      */
-    void loadAccountDetail(const QString &accountNumber, const QString &password);
-
-    /**
-     * @brief 좌측 계좌의 비밀번호 캐시를 확인하고 있으면 상세 조회를 시도한다.
-     *
-     * 캐시 미존재 시 거래 내역을 비우고 UI를 초기화한다.
-     */
-    void tryLoadLeftAccountDetail();
+    void loadAccountDetail(const QString &accountNumber);
 
     /** m_historyLayout에서 모든 거래 내역 위젯을 제거하고 m_historyCount를 0으로 초기화한다. */
     void clearHistoryLabels();
@@ -212,8 +198,6 @@ private:
     QString m_rightAccountNumber; ///< 현재 우측 패널에 선택된 계좌번호
     QString m_rightAccountType;   ///< 현재 우측 패널 계좌의 타입 ("savings"/"checking")
     int     m_rightBalance;       ///< 현재 우측 패널 계좌의 잔액
-
-    QHash<QString, QString> m_accountPasswordCache; ///< 계좌번호 → 비밀번호 캐시 (거래 후 재조회 시 재사용)
 
     int        m_historyCount;         ///< 현재 표시 중인 거래 내역 건수
     QJsonArray m_allAccounts;          ///< 서버에서 수신한 전체 계좌 목록
