@@ -10,6 +10,18 @@
 #include <QStyle>
 #include <QStyleFactory>
 
+/**
+ * 애플리케이션 진입점.
+ *
+ * 초기화 순서:
+ * 1. Fusion 스타일 적용 — Mac/Windows에서 렌더링을 통일한다.
+ * 2. 라이트 팔레트 강제 적용 — 시스템 다크모드를 무시한다.
+ * 3. 크로스플랫폼 한글 폰트 설정 (Mac: Apple SD Gothic Neo, Windows: Malgun Gothic).
+ * 4. 전역 QSS(AppStyle::APP) 적용 — 스크롤바·툴팁 등 공통 스타일.
+ * 5. 언어 설정에 맞는 번역 파일 로드.
+ * 6. NetworkClient로 서버(127.0.0.1:9999)에 연결.
+ * 7. LoginDialog 표시 후 이벤트 루프 시작.
+ */
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
@@ -33,7 +45,7 @@ int main(int argc, char *argv[])
     lightPalette.setColor(QPalette::ToolTipText,     QColor("#FFFFFF"));
     a.setPalette(lightPalette);
 
-    // ── 전역 폰트 (크로스플랫폼 한글 폰트 스택) ──
+    // ── 전역 폰트 (플랫폼별 한글 폰트 우선 적용) ──
     QFont appFont;
 #if defined(Q_OS_MAC)
     appFont.setFamily("Apple SD Gothic Neo");
@@ -45,9 +57,10 @@ int main(int argc, char *argv[])
     appFont.setPointSize(10);
     a.setFont(appFont);
 
-    // ── 전역 QSS (스크롤바, 툴팁 등) ──
+    // ── 전역 QSS (스크롤바, 툴팁 등 공통 스타일) ──
     a.setStyleSheet(AppStyle::APP);
 
+    // ── 번역 파일 로드 (시스템 언어 기준, 없으면 기본 언어 사용) ──
     QTranslator translator;
     const QStringList uiLanguages = QLocale::system().uiLanguages();
     for (const QString &locale : uiLanguages) {
@@ -58,8 +71,10 @@ int main(int argc, char *argv[])
         }
     }
 
+    // ── 서버 연결 (비동기 — 연결 실패 시 NetworkClient가 자동 재시도) ──
     NetworkClient::instance()->connectToServer("127.0.0.1", 9999);
 
+    // ── 로그인 다이얼로그 표시 및 이벤트 루프 시작 ──
     LoginDialog w;
     w.show();
     return QApplication::exec();

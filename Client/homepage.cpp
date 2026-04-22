@@ -14,6 +14,10 @@
 #include <QLocale>
 #include <QScrollArea>
 
+/**
+ * 스크롤 영역 안에 히어로 카드·안내 카드·파이차트 카드를 배치하고
+ * NetworkClient 시그널을 onResponseReceived 슬롯에 연결한다.
+ */
 HomePage::HomePage(QWidget *parent)
     : QWidget(parent)
 {
@@ -23,6 +27,7 @@ HomePage::HomePage(QWidget *parent)
     outer->setContentsMargins(0, 0, 0, 0);
     outer->setSpacing(0);
 
+    // 페이지 전체를 감싸는 스크롤 영역 (콘텐츠가 길어질 때 수직 스크롤 제공)
     QScrollArea *scroll = new QScrollArea(this);
     scroll->setWidgetResizable(true);
     scroll->setFrameShape(QFrame::NoFrame);
@@ -66,6 +71,7 @@ HomePage::HomePage(QWidget *parent)
         "color: rgba(255,255,255,0.65); font-size: 12px; font-weight: 600;"
         "letter-spacing: 0.5px; background: transparent; border: none;");
 
+    // 초기값: 서버 응답 수신 전 임시 표시
     m_labelMoney = new QLabel("불러오는 중...");
     m_labelMoney->setStyleSheet(
         "color: white; font-size: 32px; font-weight: 800;"
@@ -76,7 +82,7 @@ HomePage::HomePage(QWidget *parent)
     heroLayout->addWidget(balanceTitleLabel);
     heroLayout->addWidget(m_labelMoney);
 
-    // ── 정보 카드 ─────────────────────────────────────────────────────────────
+    // ── 서비스 안내 카드 ──────────────────────────────────────────────────────
     QFrame *infoCard = new QFrame(this);
     infoCard->setStyleSheet(AppStyle::CARD);
     AppStyle::applyCardShadow(infoCard);
@@ -119,6 +125,7 @@ HomePage::HomePage(QWidget *parent)
     m_pieChart = new BalancePieChart(pieCard);
     m_pieChart->setMinimumSize(200, 200);
 
+    // 파이차트 오른쪽 범례 컨테이너 (onResponseReceived에서 동적으로 내용 구성)
     m_legendCard = new QFrame(pieCard);
     m_legendCard->setStyleSheet("QFrame { background: transparent; border: none; }");
     QVBoxLayout *legendLayout = new QVBoxLayout(m_legendCard);
@@ -143,12 +150,14 @@ HomePage::HomePage(QWidget *parent)
             this, SLOT(onResponseReceived(QJsonObject)));
 }
 
+/** QWidget::showEvent를 호출한 뒤 loadTotalBalance()로 서버 요청을 보낸다. */
 void HomePage::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
     loadTotalBalance();
 }
 
+/** 서버에 "list_accounts" 요청을 전송한다. 세션 토큰을 함께 전달한다. */
 void HomePage::loadTotalBalance()
 {
     QJsonObject req;
@@ -158,6 +167,14 @@ void HomePage::loadTotalBalance()
     NetworkClient::instance()->sendRequest(req);
 }
 
+/**
+ * "list_accounts_response" 타입·성공 응답만 처리한다.
+ *
+ * 처리 내용:
+ * 1. 모든 계좌 잔액을 합산해 m_labelMoney에 표시한다.
+ * 2. 잔액이 0을 초과하는 계좌만 BalancePieChart::Slice로 변환해 파이차트에 전달한다.
+ * 3. m_legendCard의 기존 위젯을 제거하고 계좌별 색상 도트·이름·잔액·비중을 새로 추가한다.
+ */
 void HomePage::onResponseReceived(const QJsonObject &response)
 {
     if (response["type"].toString() != "list_accounts_response") return;
@@ -172,7 +189,7 @@ void HomePage::onResponseReceived(const QJsonObject &response)
     m_labelMoney->setText(
         QString("%L1원").arg(static_cast<long long>(total)));
 
-    // 파이 차트 데이터 구성
+    // 계좌별 색상 팔레트 (최대 10개, 이후 순환)
     static const QVector<QColor> palette = {
         QColor("#3182F6"), QColor("#00C896"), QColor("#F59E0B"),
         QColor("#EF4444"), QColor("#8B5CF6"), QColor("#06B6D4"),
@@ -184,7 +201,7 @@ void HomePage::onResponseReceived(const QJsonObject &response)
     for (int i = 0; i < accounts.size(); ++i) {
         QJsonObject acc = accounts[i].toObject();
         double balance = acc["balance"].toDouble();
-        if (balance <= 0) continue;
+        if (balance <= 0) continue;  // 잔액 0 이하 계좌는 차트에서 제외
         BalancePieChart::Slice s;
         s.label    = acc["accountNumber"].toString();
         s.subLabel = acc["type"].toString();
@@ -194,7 +211,7 @@ void HomePage::onResponseReceived(const QJsonObject &response)
     }
     m_pieChart->setAccounts(slices);
 
-    // 범례 재구성
+    // 범례 재구성: 기존 위젯 삭제 후 새로 추가
     QLayout *oldLayout = m_legendCard->layout();
     QLayoutItem *item;
     while (oldLayout && (item = oldLayout->takeAt(0)) != nullptr) {
@@ -210,12 +227,14 @@ void HomePage::onResponseReceived(const QJsonObject &response)
         rowL->setContentsMargins(0, 0, 0, 0);
         rowL->setSpacing(10);
 
+        // 색상 원형 도트
         QLabel *dot = new QLabel(row);
         dot->setFixedSize(12, 12);
         dot->setStyleSheet(QString(
             "background-color: %1; border-radius: 6px; border: none;")
             .arg(s.color.name()));
 
+        // 계좌번호 + 계좌 종류 (부연 텍스트)
         QLabel *name = new QLabel(
             QString("%1  <span style='color:#8B95A1;'>(%2)</span>")
                 .arg(s.label, s.subLabel), row);
@@ -224,6 +243,7 @@ void HomePage::onResponseReceived(const QJsonObject &response)
             "color: #4E5968; font-size: 13px; font-weight: 600;"
             "background: transparent; border: none;");
 
+        // 잔액 + 비중(%)
         const double pct = total > 0 ? (s.value / total) * 100.0 : 0.0;
         QLabel *val = new QLabel(
             QString("%1원  <span style='color:#8B95A1;'>%2%</span>")

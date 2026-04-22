@@ -14,12 +14,22 @@
 #include <QMessageBox>
 #include <QJsonObject>
 
+/** setupUI를 호출하고 NetworkClient 시그널을 연결한다. */
 NewAccountPage::NewAccountPage(QWidget* parent) : QWidget(parent) {
     setupUI();
     connect(NetworkClient::instance(), SIGNAL(responseReceived(QJsonObject)),
             this, SLOT(onNetworkResponse(QJsonObject)));
 }
 
+/**
+ * 페이지 레이아웃을 구성한다.
+ * - 상단: 페이지 제목·부제목
+ * - 카드: 계좌 종류 / 비밀번호 / 초기 입금액 / 이자율(또는 마이너스 한도) / 개설 버튼
+ *
+ * addRow 람다로 (라벨, 입력 위젯) 쌍을 수평으로 배치한다.
+ * 이자율(m_rateWidget)과 마이너스 한도(m_limitWidget)는 계좌 종류에 따라
+ * 한 쪽만 표시된다.
+ */
 void NewAccountPage::setupUI() {
     setStyleSheet("background-color: #F2F4F6;");
 
@@ -27,7 +37,6 @@ void NewAccountPage::setupUI() {
     root->setContentsMargins(48, 40, 48, 40);
     root->setSpacing(0);
 
-    // ── 페이지 타이틀 ─────────────────────────────────────────────────────────
     QLabel* pageTitle = new QLabel("신규 계좌 개설", this);
     pageTitle->setStyleSheet(
         "font-size: 24px; font-weight: 800; color: #191F28; border: none;");
@@ -39,7 +48,6 @@ void NewAccountPage::setupUI() {
     root->addWidget(pageSub);
     root->addSpacing(24);
 
-    // ── 계좌 개설 카드 (전체 너비) ────────────────────────────────────────────
     QFrame* card = new QFrame(this);
     card->setStyleSheet(AppStyle::CARD);
     AppStyle::applyCardShadow(card);
@@ -51,6 +59,7 @@ void NewAccountPage::setupUI() {
     const QString &inputStyle    = AppStyle::INPUT_ALL;
     const QString &fixedValStyle = AppStyle::FIXED_VAL;
 
+    // (라벨 텍스트, 입력 위젯)을 수평으로 묶는 헬퍼 람다
     auto addRow = [&](const QString& labelText, QWidget* field) {
         QHBoxLayout* row = new QHBoxLayout();
         row->setSpacing(0);
@@ -63,7 +72,7 @@ void NewAccountPage::setupUI() {
         cl->addLayout(row);
     };
 
-    // 계좌 종류
+    // 계좌 종류 선택 콤보박스
     m_typeCombo = new QComboBox(card);
     m_typeCombo->addItem("저축 계좌 (savings)",    "savings");
     m_typeCombo->addItem("입출금 계좌 (checking)", "checking");
@@ -72,7 +81,7 @@ void NewAccountPage::setupUI() {
         "QComboBox::drop-down { border: none; width: 32px; }");
     addRow("계좌 종류", m_typeCombo);
 
-    // 계좌 비밀번호
+    // 계좌 비밀번호 (4자 이상 필수)
     m_accPasswordEdit = new QLineEdit(card);
     m_accPasswordEdit->setPlaceholderText("4자 이상");
     m_accPasswordEdit->setEchoMode(QLineEdit::Password);
@@ -80,7 +89,7 @@ void NewAccountPage::setupUI() {
     m_accPasswordEdit->setStyleSheet(inputStyle);
     addRow("계좌 비밀번호", m_accPasswordEdit);
 
-    // 초기 입금액
+    // 초기 입금액 (0원 가능)
     m_initBalanceSpin = new QDoubleSpinBox(card);
     m_initBalanceSpin->setRange(0, 999999999);
     m_initBalanceSpin->setSingleStep(10000);
@@ -90,7 +99,7 @@ void NewAccountPage::setupUI() {
     m_initBalanceSpin->setStyleSheet(inputStyle);
     addRow("초기 입금액", m_initBalanceSpin);
 
-    // 이자율 — 저축계좌 전용
+    // 이자율 행 — 저축계좌 선택 시 표시 (고정값, 편집 불가)
     m_rateWidget = new QWidget(card);
     m_rateWidget->setStyleSheet("QWidget { border: none; background: transparent; }");
     QHBoxLayout* rateRow = new QHBoxLayout(m_rateWidget);
@@ -107,7 +116,7 @@ void NewAccountPage::setupUI() {
     rateRow->addWidget(rateVal, 1);
     cl->addWidget(m_rateWidget);
 
-    // 마이너스 한도 — 입출금계좌 전용
+    // 마이너스 한도 행 — 입출금계좌 선택 시 표시 (고정 0원, 편집 불가)
     m_limitWidget = new QWidget(card);
     m_limitWidget->setStyleSheet("QWidget { border: none; background: transparent; }");
     QHBoxLayout* limitRow = new QHBoxLayout(m_limitWidget);
@@ -122,7 +131,7 @@ void NewAccountPage::setupUI() {
     limitVal->setStyleSheet(fixedValStyle);
     limitRow->addWidget(limitLabel);
     limitRow->addWidget(limitVal, 1);
-    m_limitWidget->setVisible(false);
+    m_limitWidget->setVisible(false);  // 기본 선택이 savings이므로 숨김
     cl->addWidget(m_limitWidget);
 
     // 개설 버튼
@@ -136,16 +145,25 @@ void NewAccountPage::setupUI() {
     root->addWidget(card);
     root->addStretch();
 
-    connect(m_createBtn, SIGNAL(clicked()),               this, SLOT(onCreateClicked()));
+    connect(m_createBtn, SIGNAL(clicked()),                this, SLOT(onCreateClicked()));
     connect(m_typeCombo, SIGNAL(currentIndexChanged(int)), this, SLOT(onTypeChanged(int)));
 }
 
+/**
+ * savings 선택 시 m_rateWidget 표시·m_limitWidget 숨김.
+ * checking 선택 시 반대로 전환한다.
+ */
 void NewAccountPage::onTypeChanged(int index) {
     bool isSavings = (m_typeCombo->itemData(index).toString() == "savings");
     m_rateWidget->setVisible(isSavings);
     m_limitWidget->setVisible(!isSavings);
 }
 
+/**
+ * 비밀번호 4자 미만이면 경고하고 중단한다.
+ * 유효 시 계좌 종류·비밀번호·초기 입금액과
+ * 계좌 종류별 추가 필드(interestRate 또는 overdraftLimit)를 담아 요청을 전송한다.
+ */
 void NewAccountPage::onCreateClicked() {
     if (m_accPasswordEdit->text().length() < 4) {
         QMessageBox::warning(this, "입력 오류", "계좌 비밀번호는 4자 이상이어야 합니다.");
@@ -160,9 +178,9 @@ void NewAccountPage::onCreateClicked() {
     data["accountPassword"] = m_accPasswordEdit->text();
     data["initBalance"]     = m_initBalanceSpin->value();
     if (type == "savings")
-        data["interestRate"]   = 0.03;   // 고정 이율
+        data["interestRate"]   = 0.03;   // 저축계좌 고정 이율 3%
     else
-        data["overdraftLimit"] = 0.0;    // 마이너스 한도 0 고정
+        data["overdraftLimit"] = 0.0;    // 입출금계좌 마이너스 한도 0
 
     QJsonObject req;
     req["type"]  = "create_account";
@@ -171,6 +189,7 @@ void NewAccountPage::onCreateClicked() {
     NetworkClient::instance()->sendRequest(req);
 }
 
+/** 비모달 QMessageBox를 표시하는 파일-로컬 헬퍼 함수. */
 static void showBox(QWidget *parent, QMessageBox::Icon icon,
                     const QString &title, const QString &text)
 {
@@ -179,6 +198,11 @@ static void showBox(QWidget *parent, QMessageBox::Icon icon,
     box->open();
 }
 
+/**
+ * "create_account_response" 타입만 처리한다.
+ * 성공: 발급된 계좌번호를 안내하고 비밀번호·초기 입금액 필드를 초기화한다.
+ * 실패: 서버 오류 메시지를 경고로 표시한다.
+ */
 void NewAccountPage::onNetworkResponse(const QJsonObject& resp) {
     if (resp["type"].toString() != "create_account_response") return;
 
