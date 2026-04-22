@@ -277,8 +277,6 @@ void AccountProcessPage::setupRightPanel()
             this, SLOT(onExecuteClicked()));
     connect(m_withdrawRadio, SIGNAL(clicked(bool)),
             this, SLOT(onWithdrawRadioClicked(bool)));
-    connect(m_accountPasswordEdit, SIGNAL(returnPressed()),
-            this, SLOT(onPasswordReturnPressed()));
 }
 
 /** 페이지가 표시될 때마다 최신 계좌 목록을 서버에서 로드한다. */
@@ -331,7 +329,12 @@ void AccountProcessPage::updateRightSummary(const QJsonObject &acc)
     }
 }
 
-/** 콤보박스 인덱스에 해당하는 계좌 정보를 우측에 갱신하고, 비밀번호가 있으면 상세를 조회한다. */
+/**
+ * 콤보박스 인덱스에 해당하는 계좌 정보를 우측에 갱신한다.
+ * [변경] 이전에는 비밀번호 입력 여부에 따라 조건부로 상세 조회를 트리거했으나,
+ *        상세 조회가 비밀번호 불필요로 바뀌었으므로 여기서는 우측 요약만 갱신한다.
+ *        (거래 내역은 좌측 패널 기준으로 loadAccountDetail 호출)
+ */
 void AccountProcessPage::onDetailAccountChanged(int index)
 {
     if (index < 0 || index >= m_allAccounts.size())
@@ -339,11 +342,6 @@ void AccountProcessPage::onDetailAccountChanged(int index)
 
     QJsonObject acc = m_allAccounts[index].toObject();
     updateRightSummary(acc);
-
-    QString pw = m_accountPasswordEdit->text().trimmed();
-    if (!pw.isEmpty()) {
-        loadAccountDetail(m_rightAccountNumber, pw);
-    }
 }
 
 /** 저축계좌에서 출금을 시도하면 경고를 표시하고 입금 라디오로 되돌린다. */
@@ -359,15 +357,17 @@ void AccountProcessPage::onWithdrawRadioClicked(bool checked)
     }
 }
 
-/** 비밀번호가 비어 있으면 요청하지 않는다. */
-void AccountProcessPage::loadAccountDetail(const QString &accountNumber, const QString &password)
+/**
+ * 계좌 상세를 서버에 요청한다.
+ * [변경] 서버 handleGetAccountDetail의 비밀번호 검증이 제거되어,
+ *        data에 accountPassword를 넣지 않는다. token만으로 조회 가능.
+ */
+void AccountProcessPage::loadAccountDetail(const QString &accountNumber)
 {
-    QString pw = password.trimmed();
-    if (pw.isEmpty()) return;
+    if (accountNumber.isEmpty()) return;
 
     QJsonObject data;
-    data["accountNumber"]   = accountNumber;
-    data["accountPassword"] = pw;
+    data["accountNumber"] = accountNumber;  // accountPassword 필드 삭제됨
 
     QJsonObject request;
     request["type"]  = "get_account_detail";
@@ -375,24 +375,6 @@ void AccountProcessPage::loadAccountDetail(const QString &accountNumber, const Q
     request["data"]  = data;
 
     NetworkClient::instance()->sendRequest(request);
-}
-
-/**
- * 좌측 계좌의 비밀번호를 캐시에서 찾아 상세 조회를 시도한다.
- * 캐시 미존재 시 거래 내역을 초기화한다.
- */
-void AccountProcessPage::tryLoadLeftAccountDetail()
-{
-    if (m_leftAccountNumber.isEmpty()) return;
-
-    if (m_accountPasswordCache.contains(m_leftAccountNumber)) {
-        loadAccountDetail(m_leftAccountNumber,
-                          m_accountPasswordCache.value(m_leftAccountNumber));
-    } else {
-        m_currentTransactions = QJsonArray();
-        clearHistoryLabels();
-        updateTotalLabel();
-    }
 }
 
 /**
@@ -529,16 +511,6 @@ void AccountProcessPage::fillSearchResults(const QString &keyword)
     m_searchResultList->setVisible(m_searchResultList->count() > 0);
 }
 
-/** Enter 키로 비밀번호를 확인하면 즉시 우측 계좌 상세를 조회한다. */
-void AccountProcessPage::onPasswordReturnPressed()
-{
-    if (!m_rightAccountNumber.isEmpty()) {
-        const QString pw = m_accountPasswordEdit->text().trimmed();
-        if (!pw.isEmpty())
-            loadAccountDetail(m_rightAccountNumber, pw);
-    }
-}
-
 /** 검색 텍스트 변경 시 fillSearchResults()를 공백 제거 후 호출한다. */
 void AccountProcessPage::onSearchTextChanged(const QString &text)
 {
@@ -546,8 +518,9 @@ void AccountProcessPage::onSearchTextChanged(const QString &text)
 }
 
 /**
- * 검색 결과 항목 클릭 시 해당 계좌를 좌측 패널에 선택하고
- * 캐시된 비밀번호가 있으면 즉시 거래 내역을 조회한다.
+ * 검색 결과 항목 클릭 시 해당 계좌를 좌측 패널에 선택하고 거래 내역을 조회한다.
+ * [변경] 비밀번호 캐시 확인 단계(tryLoadLeftAccountDetail) 제거 —
+ *        비밀번호 없이 바로 loadAccountDetail로 거래 내역을 불러온다.
  */
 void AccountProcessPage::onSearchResultClicked(QListWidgetItem *item)
 {
@@ -562,7 +535,7 @@ void AccountProcessPage::onSearchResultClicked(QListWidgetItem *item)
     m_searchEdit->setText(acc["accountNumber"].toString());
     m_searchResultList->setVisible(false);
 
-    tryLoadLeftAccountDetail();
+    loadAccountDetail(m_leftAccountNumber);
 }
 
 /**
@@ -626,8 +599,9 @@ void AccountProcessPage::onResponseReceived(const QJsonObject &response)
             updateRightSummary(m_allAccounts[selectedRightIndex].toObject());
             updateLeftSummary(m_allAccounts[selectedLeftIndex].toObject());
 
+            // [변경] 비밀번호 캐시 조회 없이 바로 상세 요청 — 서버가 토큰만 검증
             if (!m_leftAccountNumber.isEmpty())
-                tryLoadLeftAccountDetail();
+                loadAccountDetail(m_leftAccountNumber);
         } else {
             // 보유 계좌가 없는 경우 모든 상태와 UI를 초기화한다
             m_leftAccountNumber.clear();
@@ -658,10 +632,8 @@ void AccountProcessPage::onResponseReceived(const QJsonObject &response)
         QJsonObject account     = response["data"].toObject()["account"].toObject();
         QString     accountNumber = account["accountNumber"].toString();
 
-        // 비밀번호 캐시 저장 (다음 갱신 시 재사용)
-        QString currentPw = m_accountPasswordEdit->text().trimmed();
-        if (!currentPw.isEmpty() && accountNumber == m_rightAccountNumber)
-            m_accountPasswordCache[accountNumber] = currentPw;
+        // [변경] 비밀번호 캐시(m_accountPasswordCache) 저장 로직 삭제 —
+        //        상세 조회에 비밀번호가 필요 없어 캐시 자체가 불필요해짐
 
         // 우측 계좌에 대한 응답이면 잔액만 갱신
         if (accountNumber == m_rightAccountNumber)
@@ -683,13 +655,6 @@ void AccountProcessPage::onResponseReceived(const QJsonObject &response)
         m_rightBalance = static_cast<int>(response["data"].toObject()["balance"].toDouble());
         m_selectedBalanceLabel->setText(QString("%1원").arg(m_rightBalance));
 
-        // 비밀번호를 캐시에 저장
-        if (!m_rightAccountNumber.isEmpty()) {
-            QString pw = m_accountPasswordEdit->text().trimmed();
-            if (!pw.isEmpty())
-                m_accountPasswordCache[m_rightAccountNumber] = pw;
-        }
-
         showBox(this, QMessageBox::Information, "완료", response["message"].toString());
 
         // 입력 필드 초기화
@@ -699,14 +664,12 @@ void AccountProcessPage::onResponseReceived(const QJsonObject &response)
         // 계좌 목록 갱신 및 거래 내역 재조회
         loadAccounts();
 
-        if (!m_rightAccountNumber.isEmpty()) {
-            QString pw = m_accountPasswordCache.value(m_rightAccountNumber);
-            if (!pw.isEmpty())
-                loadAccountDetail(m_rightAccountNumber, pw);
-        }
+        // [변경] 비밀번호 캐시 없이 바로 상세 재조회 (조회에는 비밀번호 불필요)
+        if (!m_rightAccountNumber.isEmpty())
+            loadAccountDetail(m_rightAccountNumber);
 
         // 좌측과 우측이 다른 계좌라면 좌측도 갱신
         if (!m_leftAccountNumber.isEmpty() && m_leftAccountNumber != m_rightAccountNumber)
-            tryLoadLeftAccountDetail();
+            loadAccountDetail(m_leftAccountNumber);
     }
 }

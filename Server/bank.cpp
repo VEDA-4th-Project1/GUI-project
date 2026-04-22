@@ -174,21 +174,21 @@ QJsonObject Bank::handleListAccounts(const QString& token) {
 }
 
 // 계좌 상세 조회: 소유권 검증 후 거래 내역을 포함한 계좌 전체 정보 반환
+// [변경] 계좌 비밀번호 검증 제거 — 세션 토큰(로그인 인증) + 본인 계좌 소유권만 확인.
+//        조회는 읽기 전용이고 본인 계좌로 한정되므로 추가 비밀번호는 불필요.
+//        비밀번호 검증은 실제 자산 이동(deposit/withdraw)·해지(close_account)에서만 수행.
 QJsonObject Bank::handleGetAccountDetail(const QString& token, const QJsonObject& data) {
     if (!m_sessionManager.isValid(token))
         return unauthorizedResponse("get_account_detail");
 
-    QString  userId     = m_sessionManager.getUserId(token);
-    QString  accNum     = data["accountNumber"].toString();
-    QString  accPassword = data["accountPassword"].toString(); // 계좌 비밀번호 검증
-    Account* acc        = m_accountRepo.findByNumber(accNum);
+    QString  userId = m_sessionManager.getUserId(token);
+    QString  accNum = data["accountNumber"].toString();
+    Account* acc    = m_accountRepo.findByNumber(accNum);
 
     if (!acc)
         return errorResponse("get_account_detail", "계좌를 찾을 수 없습니다");
     if (acc->getOwnerId() != userId)
         return errorResponse("get_account_detail", "접근 권한이 없습니다");
-    if (!acc->verifyAccountPassword(accPassword))
-        return errorResponse("get_account_detail", "계좌 비밀번호가 올바르지 않습니다");
 
     QJsonObject respData;
     respData["account"] = acc->toJson(); // 거래 내역 포함 전체 직렬화
