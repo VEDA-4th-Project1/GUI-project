@@ -11,7 +11,7 @@
 #include <QDate>
 #include <QJsonObject>
 
-// ─────────────────────────────────────────────────────────────────────────────
+/** setupUI/applyStyles를 호출하고 NetworkClient 시그널을 연결한다. */
 RegisterDialog::RegisterDialog(QWidget *parent)
     : QDialog(parent)
 {
@@ -27,9 +27,11 @@ RegisterDialog::RegisterDialog(QWidget *parent)
             this, SLOT(onNetworkError(QString)));
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  UI 구성
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * 카드 프레임 안에 이름·생년월일·아이디(+중복확인)·
+ * 비밀번호·비밀번호 확인·버튼 순으로 위젯을 배치한다.
+ * 생년월일은 QDateEdit + QCalendarWidget 팝업으로 구현한다.
+ */
 void RegisterDialog::setupUI()
 {
     QVBoxLayout *rootLayout = new QVBoxLayout(this);
@@ -73,13 +75,13 @@ void RegisterDialog::setupUI()
     m_birthEdit = new QDateEdit(m_card);
     m_birthEdit->setObjectName("dateField");
     m_birthEdit->setFixedHeight(42);
-    m_birthEdit->setDisplayFormat("yyyy-MM-dd");        // YYYY-MM-DD 표시 형식
-    m_birthEdit->setDate(QDate(2000, 1, 1));            // 기본 날짜
-    m_birthEdit->setMinimumDate(QDate(1900, 1, 1));     // 선택 가능 최소 날짜
-    m_birthEdit->setMaximumDate(QDate::currentDate());  // 오늘까지만 선택 가능
-    m_birthEdit->setCalendarPopup(true);                // ← 클릭 시 달력 팝업 활성화
+    m_birthEdit->setDisplayFormat("yyyy-MM-dd");
+    m_birthEdit->setDate(QDate(2000, 1, 1));
+    m_birthEdit->setMinimumDate(QDate(1900, 1, 1));
+    m_birthEdit->setMaximumDate(QDate::currentDate());  // 미래 날짜 선택 불가
+    m_birthEdit->setCalendarPopup(true);
 
-    // 달력 위젯 스타일 커스터마이징 (라이트 테마)
+    // 달력 위젯 라이트 테마 커스터마이징
     QCalendarWidget *calendar = m_birthEdit->calendarWidget();
     calendar->setGridVisible(false);
     calendar->setHorizontalHeaderFormat(QCalendarWidget::ShortDayNames);
@@ -184,7 +186,7 @@ void RegisterDialog::setupUI()
 
     cardLayout->addSpacing(6);
 
-    // ── O / X 버튼 행 ────────────────────────────────────────────────────────
+    // ── 버튼 행 ─────────────────────────────────────────────────────────────
     auto *btnRow = new QHBoxLayout();
     btnRow->setSpacing(10);
 
@@ -204,16 +206,13 @@ void RegisterDialog::setupUI()
 
     rootLayout->addWidget(m_card);
 
-    // ── 시그널 연결 ───────────────────────────────────────────────────────────
-    connect(m_dupCheckBtn, SIGNAL(clicked()),          this, SLOT(onDuplicateCheckClicked()));
-    connect(m_confirmBtn,  SIGNAL(clicked()),          this, SLOT(onConfirmClicked()));
-    connect(m_cancelBtn,   SIGNAL(clicked()),          this, SLOT(onCancelClicked()));
+    connect(m_dupCheckBtn, SIGNAL(clicked()),            this, SLOT(onDuplicateCheckClicked()));
+    connect(m_confirmBtn,  SIGNAL(clicked()),            this, SLOT(onConfirmClicked()));
+    connect(m_cancelBtn,   SIGNAL(clicked()),            this, SLOT(onCancelClicked()));
     connect(m_idEdit,      SIGNAL(textChanged(QString)), this, SLOT(onIdTextChanged()));
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  스타일시트
-// ─────────────────────────────────────────────────────────────────────────────
+/** objectName 기반 QSS로 스타일을 적용한다. */
 void RegisterDialog::applyStyles()
 {
     setStyleSheet(AppStyle::DARK_DIALOG_BG);
@@ -285,9 +284,10 @@ void RegisterDialog::applyStyles()
     )");
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  헬퍼
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * 아이디 입력 필드의 테두리 색상을 동적으로 변경한다.
+ * 중복 확인 성공 시 초록(#00C896), 실패 시 빨강(#F04452)으로 표시된다.
+ */
 void RegisterDialog::setIdBorderColor(const QString &color)
 {
     m_idEdit->setStyleSheet(
@@ -303,15 +303,20 @@ void RegisterDialog::setIdBorderColor(const QString &color)
     );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  슬롯
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * 아이디 텍스트가 변경될 때마다 m_idChecked를 false로 초기화하고
+ * 테두리 색을 기본값으로 되돌려 재확인을 유도한다.
+ */
 void RegisterDialog::onIdTextChanged()
 {
     m_idChecked = false;
     setIdBorderColor("#E5E8EB");
 }
 
+/**
+ * 아이디 공백 및 3자 미만 검증 후 서버에 "check_id" 요청을 전송한다.
+ * 요청 중 중복 확인 버튼을 비활성화한다.
+ */
 void RegisterDialog::onDuplicateCheckClicked()
 {
     const QString id = m_idEdit->text().trimmed();
@@ -325,7 +330,6 @@ void RegisterDialog::onDuplicateCheckClicked()
         return;
     }
 
-    // 서버에 중복 여부 확인 요청 (미연결 시 sendRequest 내부에서 자동 재연결 후 재전송)
     m_dupCheckBtn->setEnabled(false);
     QJsonObject data;
     data["id"] = id;
@@ -335,6 +339,10 @@ void RegisterDialog::onDuplicateCheckClicked()
     NetworkClient::instance()->sendRequest(req);
 }
 
+/**
+ * 모든 입력 필드를 순서대로 검사한다.
+ * 하나라도 실패하면 해당 필드에 포커스를 주고 false를 반환한다.
+ */
 bool RegisterDialog::validateInputs()
 {
     if (m_nameEdit->text().trimmed().isEmpty()) {
@@ -343,8 +351,7 @@ bool RegisterDialog::validateInputs()
         return false;
     }
 
-    // QDateEdit 은 항상 유효한 날짜를 가지므로 별도 형식 검사 불필요
-    // 미래 날짜 방지 (setMaximumDate 로 이미 막혀 있지만 이중 체크)
+    // setMaximumDate로 이미 미래 날짜가 막혀 있지만 이중 체크
     if (m_birthEdit->date() > QDate::currentDate()) {
         QMessageBox::warning(this, tr("입력 오류"), tr("생년월일이 올바르지 않습니다."));
         return false;
@@ -376,11 +383,14 @@ bool RegisterDialog::validateInputs()
     return true;
 }
 
+/**
+ * validateInputs() 통과 후 서버에 "register" 요청을 전송한다.
+ * 요청 중 가입 완료 버튼을 비활성화한다.
+ */
 void RegisterDialog::onConfirmClicked()
 {
     if (!validateInputs()) return;
 
-    // 서버에 회원가입 요청 전송
     m_confirmBtn->setEnabled(false);
     QJsonObject data;
     data["id"]       = m_idEdit->text().trimmed();
@@ -392,9 +402,13 @@ void RegisterDialog::onConfirmClicked()
     NetworkClient::instance()->sendRequest(req);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  서버 응답 라우팅
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * "check_id_response"와 "register_response" 두 가지 타입을 처리한다.
+ *
+ * check_id_response 성공: m_idChecked = true, 테두리 초록색.
+ * check_id_response 실패: m_idChecked = false, 테두리 빨간색.
+ * register_response 성공: 안내 메시지 후 accept()로 닫음.
+ */
 void RegisterDialog::onNetworkResponse(const QJsonObject& resp)
 {
     const QString type   = resp["type"].toString();
@@ -423,6 +437,7 @@ void RegisterDialog::onNetworkResponse(const QJsonObject& resp)
     }
 }
 
+/** 네트워크 오류 발생 시 메시지를 표시하고 두 버튼을 모두 다시 활성화한다. */
 void RegisterDialog::onNetworkError(const QString& message)
 {
     QMessageBox::critical(this, tr("네트워크 오류"), message);
@@ -430,6 +445,7 @@ void RegisterDialog::onNetworkError(const QString& message)
     m_dupCheckBtn->setEnabled(true);
 }
 
+/** 다이얼로그를 거부(reject)하여 닫는다. */
 void RegisterDialog::onCancelClicked()
 {
     reject();

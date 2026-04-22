@@ -11,6 +11,7 @@
 #include <QGraphicsDropShadowEffect>
 #include <QJsonObject>
 
+/** setupUI/applyStyles를 호출하고 NetworkClient 시그널을 연결한다. */
 LoginDialog::LoginDialog(QWidget *parent)
     : QDialog(parent)
 {
@@ -27,6 +28,7 @@ LoginDialog::LoginDialog(QWidget *parent)
 
 LoginDialog::~LoginDialog() = default;
 
+/** 카드 프레임 → 제목/부제목 → 아이디/비밀번호 입력 → 버튼 순으로 위젯을 배치한다. */
 void LoginDialog::setupUI()
 {
     QVBoxLayout *rootLayout = new QVBoxLayout(this);
@@ -120,6 +122,7 @@ void LoginDialog::setupUI()
     connect(m_cancelBtn, SIGNAL(clicked()), this, SLOT(onCancelClicked()));
 }
 
+/** objectName 기반 QSS로 각 위젯의 색상·폰트·모서리를 지정한다. */
 void LoginDialog::applyStyles()
 {
     setStyleSheet(AppStyle::DARK_DIALOG_BG);
@@ -151,12 +154,17 @@ void LoginDialog::applyStyles()
     );
 }
 
+/** RegisterDialog를 모달로 열고 완료되면 반환한다. */
 void LoginDialog::onRegisterClicked()
 {
     RegisterDialog dlg(this);
     dlg.exec();
 }
 
+/**
+ * 아이디·비밀번호 공백 검증 후 서버에 "login" 요청을 전송한다.
+ * 요청 중 확인 버튼을 비활성화해 중복 요청을 방지한다.
+ */
 void LoginDialog::onConfirmClicked()
 {
     const QString id = m_idEdit->text().trimmed();
@@ -168,7 +176,6 @@ void LoginDialog::onConfirmClicked()
         return;
     }
 
-    // 서버에 로그인 요청
     m_confirmBtn->setEnabled(false);
     QJsonObject data;
     data["id"]       = id;
@@ -179,6 +186,11 @@ void LoginDialog::onConfirmClicked()
     NetworkClient::instance()->sendRequest(req);
 }
 
+/**
+ * "login_response" 타입만 처리한다.
+ * 성공 시: 시그널 연결을 끊어 중복 처리를 방지하고, 세션을 저장한 뒤 MainWindow를 연다.
+ * 실패 시: 경고 다이얼로그를 표시하고 확인 버튼을 다시 활성화한다.
+ */
 void LoginDialog::onNetworkResponse(const QJsonObject& resp)
 {
     if (resp["type"].toString() != "login_response") return;
@@ -186,14 +198,13 @@ void LoginDialog::onNetworkResponse(const QJsonObject& resp)
     m_confirmBtn->setEnabled(true);
 
     if (resp["status"].toString() == "success") {
-        // 로그인 성공 후 이 LoginDialog가 다시 응답을 처리하지 않도록 연결 해제
+        // 이후 LoginDialog가 다시 응답을 처리하지 않도록 연결 해제
         disconnect(NetworkClient::instance(), SIGNAL(responseReceived(QJsonObject)),
                    this, SLOT(onNetworkResponse(QJsonObject)));
 
         QJsonObject respData = resp["data"].toObject();
         QJsonObject user     = respData["user"].toObject();
 
-        // 세션 정보 저장
         SessionContext::instance().setSession(
             respData["token"].toString(),
             user["id"].toString(),
@@ -208,12 +219,14 @@ void LoginDialog::onNetworkResponse(const QJsonObject& resp)
     }
 }
 
+/** 네트워크 오류 메시지를 표시하고 확인 버튼을 다시 활성화한다. */
 void LoginDialog::onNetworkError(const QString& message)
 {
     QMessageBox::critical(this, tr("네트워크 오류"), message);
     m_confirmBtn->setEnabled(true);
 }
 
+/** 다이얼로그를 거부(reject)하여 닫는다. */
 void LoginDialog::onCancelClicked()
 {
     reject();

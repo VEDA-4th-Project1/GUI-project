@@ -20,7 +20,11 @@
 #include <QIcon>
 #include <QSize>
 
-
+/**
+ * 생성자에서 레이아웃 전체를 구성한다.
+ * - 왼쪽: 사이드바 (로고, 사용자 카드, 메뉴 버튼, 로그아웃 버튼)
+ * - 오른쪽: QStackedWidget (홈/신규계좌/내정보/계좌처리 페이지)
+ */
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -47,7 +51,7 @@ MainWindow::MainWindow(QWidget *parent)
     sideLayout->setContentsMargins(16, 28, 16, 24);
     sideLayout->setSpacing(4);
 
-    // 로고
+    // 로고 텍스트 + 서브타이틀
     QLabel *logoLabel = new QLabel("Easy Bank");
     logoLabel->setStyleSheet(AppStyle::SIDEBAR_LOGO);
     logoLabel->setContentsMargins(8, 0, 0, 0);
@@ -56,7 +60,7 @@ MainWindow::MainWindow(QWidget *parent)
     logoSub->setStyleSheet(AppStyle::SIDEBAR_LOGO_SUB);
     logoSub->setContentsMargins(8, 0, 0, 0);
 
-    // 유저 카드
+    // 사용자 환영 카드 (로그인한 사용자 이름 표시)
     QWidget *userCard = new QWidget;
     userCard->setStyleSheet(
         "QWidget {"
@@ -76,11 +80,12 @@ MainWindow::MainWindow(QWidget *parent)
     userCardLayout->addWidget(helloLabel);
     userCardLayout->addWidget(nameLabel);
 
-    // 메뉴 섹션
+    // 메뉴 섹션 라벨
     QLabel *menuSection = new QLabel("MENU");
     menuSection->setStyleSheet(AppStyle::SIDEBAR_SECTION);
     menuSection->setContentsMargins(8, 0, 0, 0);
 
+    // 메뉴 버튼 생성 + 아이콘 설정
     btnHome           = new QPushButton(" 홈");
     btnNewAccount     = new QPushButton(" 신규계좌 관리");
     btnMyInfo         = new QPushButton(" 내 정보");
@@ -101,7 +106,7 @@ MainWindow::MainWindow(QWidget *parent)
         btn->setStyleSheet(AppStyle::SIDEBAR_BTN);
     }
 
-    // 로그아웃 버튼
+    // 로그아웃 버튼 (사이드바 하단)
     btnLogout = new QPushButton("로그아웃");
     btnLogout->setCursor(Qt::PointingHandCursor);
     btnLogout->setMinimumHeight(40);
@@ -125,9 +130,9 @@ MainWindow::MainWindow(QWidget *parent)
     stackedWidget = new QStackedWidget;
     stackedWidget->setStyleSheet("QStackedWidget { background-color: #F2F4F6; }");
 
-    pageHome          = new HomePage(this);
-    pageNewAccount    = new NewAccountPage(this);
-    pageMyInfo        = new MyInfoPage(this);
+    pageHome           = new HomePage(this);
+    pageNewAccount     = new NewAccountPage(this);
+    pageMyInfo         = new MyInfoPage(this);
     pageAccountProcess = new AccountProcessPage(this);
 
     stackedWidget->addWidget(pageHome);
@@ -138,12 +143,14 @@ MainWindow::MainWindow(QWidget *parent)
     mainLayout->addWidget(sideMenuWidget);
     mainLayout->addWidget(stackedWidget);
 
+    // 메뉴 버튼 → 페이지 전환 슬롯 연결
     connect(btnHome,           SIGNAL(clicked()), this, SLOT(goHome()));
     connect(btnNewAccount,     SIGNAL(clicked()), this, SLOT(goNewAccount()));
     connect(btnMyInfo,         SIGNAL(clicked()), this, SLOT(goMyInfo()));
     connect(btnAccountProcess, SIGNAL(clicked()), this, SLOT(goAccountProcess()));
     connect(btnLogout, SIGNAL(clicked()), this, SLOT(onLogoutClicked()));
 
+    // 초기 페이지: 홈
     stackedWidget->setCurrentWidget(pageHome);
     updateMenuStyle(btnHome);
 }
@@ -152,6 +159,10 @@ MainWindow::~MainWindow()
 {
 }
 
+/**
+ * 메뉴 버튼 목록을 순회하며 selectedButton만 SIDEBAR_BTN_ACTIVE 스타일을 적용하고
+ * 나머지는 SIDEBAR_BTN 기본 스타일로 되돌린다.
+ */
 void MainWindow::updateMenuStyle(QPushButton *selectedButton)
 {
     QList<QPushButton*> menuButtons;
@@ -163,18 +174,21 @@ void MainWindow::updateMenuStyle(QPushButton *selectedButton)
     }
 }
 
+/** HomePage로 전환하고 홈 버튼을 활성 스타일로 강조한다. */
 void MainWindow::goHome()
 {
     stackedWidget->setCurrentWidget(pageHome);
     updateMenuStyle(btnHome);
 }
 
+/** NewAccountPage로 전환하고 신규계좌 버튼을 활성 스타일로 강조한다. */
 void MainWindow::goNewAccount()
 {
     stackedWidget->setCurrentWidget(pageNewAccount);
     updateMenuStyle(btnNewAccount);
 }
 
+/** MyInfoPage의 사용자 정보를 새로 로드한 뒤 페이지로 전환한다. */
 void MainWindow::goMyInfo()
 {
     pageMyInfo->loadUserInfo();
@@ -182,12 +196,17 @@ void MainWindow::goMyInfo()
     updateMenuStyle(btnMyInfo);
 }
 
+/** AccountProcessPage로 전환하고 계좌처리 버튼을 활성 스타일로 강조한다. */
 void MainWindow::goAccountProcess()
 {
     stackedWidget->setCurrentWidget(pageAccountProcess);
     updateMenuStyle(btnAccountProcess);
 }
 
+/**
+ * 서버에 "logout" 요청을 전송하고, SessionContext를 초기화한 뒤
+ * 새 LoginDialog를 표시하고 현재 MainWindow를 닫는다.
+ */
 void MainWindow::onLogoutClicked()
 {
     QJsonObject request;

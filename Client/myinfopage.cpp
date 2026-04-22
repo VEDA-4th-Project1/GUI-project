@@ -18,7 +18,10 @@
 #include <QScrollArea>
 #include <QLocale>
 
-
+/**
+ * 스타일이 적용된 QMessageBox를 동기(exec)로 실행하는 파일-로컬 헬퍼.
+ * @return 사용자가 클릭한 버튼의 StandardButton 값
+ */
 static int showMsg(QWidget *parent, QMessageBox::Icon icon,
                    const QString &title, const QString &text,
                    QMessageBox::StandardButtons btns = QMessageBox::Ok)
@@ -28,8 +31,7 @@ static int showMsg(QWidget *parent, QMessageBox::Icon icon,
     return box.exec();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
+/** setupUI를 호출하고 NetworkClient 시그널을 연결한다. */
 MyInfoPage::MyInfoPage(QWidget *parent) : QWidget(parent)
 {
     setupUI();
@@ -37,6 +39,13 @@ MyInfoPage::MyInfoPage(QWidget *parent) : QWidget(parent)
             this, SLOT(onNetworkResponse(QJsonObject)));
 }
 
+/**
+ * 스크롤 영역 안에 4개의 카드를 세로로 배치한다.
+ * 1. 프로필 헤더 카드 (그라디언트)
+ * 2. 통계 카드 3개 (수평 배치)
+ * 3. 기본 정보 카드 (아이디·이름·가입일 + 액션 버튼)
+ * 4. 내 계좌 목록 카드
+ */
 void MyInfoPage::setupUI()
 {
     setStyleSheet("background-color: #F2F4F6;");
@@ -66,7 +75,7 @@ void MyInfoPage::setupUI()
     root->setContentsMargins(40, 40, 40, 40);
     root->setSpacing(20);
 
-    // ── 프로필 헤더 카드 (그라데이션 + 원형 아바타) ───────────────────────────
+    // ── 프로필 헤더 카드 (블루→초록 그라디언트 + 원형 아바타) ────────────────
     QFrame *header = new QFrame(content);
     header->setStyleSheet(
         "QFrame {"
@@ -81,6 +90,7 @@ void MyInfoPage::setupUI()
     headerLayout->setContentsMargins(28, 24, 28, 24);
     headerLayout->setSpacing(20);
 
+    // 이름 첫 글자를 원형 배경에 표시하는 아바타 라벨
     m_avatarLabel = new QLabel("?", header);
     m_avatarLabel->setFixedSize(72, 72);
     m_avatarLabel->setAlignment(Qt::AlignCenter);
@@ -119,7 +129,7 @@ void MyInfoPage::setupUI()
 
     root->addWidget(header);
 
-    // ── 통계 카드 3개 ────────────────────────────────────────────────────────
+    // ── 통계 카드 3개 (람다로 반복 구조 생성) ──────────────────────────────
     auto makeStatCard = [&](const QString &title, QLabel *&valueOut) -> QFrame* {
         QFrame *c = new QFrame(content);
         c->setStyleSheet(AppStyle::CARD);
@@ -142,12 +152,12 @@ void MyInfoPage::setupUI()
 
     QHBoxLayout *statsRow = new QHBoxLayout();
     statsRow->setSpacing(16);
-    statsRow->addWidget(makeStatCard("보유 계좌", m_statAccountsVal), 1);
+    statsRow->addWidget(makeStatCard("보유 계좌",  m_statAccountsVal), 1);
     statsRow->addWidget(makeStatCard("총 자산",    m_statTotalVal),    1);
     statsRow->addWidget(makeStatCard("가입 경과일", m_statDaysVal),    1);
     root->addLayout(statsRow);
 
-    // ── 내 정보 카드 ──────────────────────────────────────────────────────────
+    // ── 기본 정보 카드 ────────────────────────────────────────────────────
     QFrame *card = new QFrame(content);
     card->setStyleSheet(AppStyle::CARD);
     AppStyle::applyCardShadow(card);
@@ -165,6 +175,7 @@ void MyInfoPage::setupUI()
     cardLayout->addWidget(titleSub);
     cardLayout->addSpacing(6);
 
+    // 수평 구분선을 생성하는 람다
     auto makeDivider = [&]() -> QFrame* {
         QFrame *div = new QFrame;
         div->setFrameShape(QFrame::HLine);
@@ -172,7 +183,14 @@ void MyInfoPage::setupUI()
         return div;
     };
 
-    // 아이콘(이모지) 칩 + 라벨 + 값 구성의 카드형 행
+    /**
+     * 아이콘 칩·필드명·값 라벨로 구성된 정보 행을 생성하는 람다.
+     * @param icon      칩 안에 표시할 텍스트 (이모지 또는 기호)
+     * @param chipBg    칩 배경색
+     * @param chipFg    칩 전경(텍스트)색
+     * @param fieldName 필드 이름 라벨 텍스트
+     * @param valueLabel [out] 값을 표시할 QLabel 포인터 (외부에서 setText로 갱신)
+     */
     auto addInfoRow = [&](const QString &icon, const QString &chipBg, const QString &chipFg,
                           const QString &fieldName, QLabel *&valueLabel) {
         QFrame *row = new QFrame(card);
@@ -241,7 +259,7 @@ void MyInfoPage::setupUI()
 
     root->addWidget(card);
 
-    // ── 내 계좌 목록 카드 ────────────────────────────────────────────────────
+    // ── 내 계좌 목록 카드 ────────────────────────────────────────────────
     QFrame *accCard = new QFrame(content);
     accCard->setStyleSheet(AppStyle::CARD);
     AppStyle::applyCardShadow(accCard);
@@ -255,6 +273,7 @@ void MyInfoPage::setupUI()
     accLayout->addWidget(accTitle);
     accLayout->addWidget(makeDivider());
 
+    // 계좌 행들을 동적으로 추가/제거하는 컨테이너
     m_accountsListBox = new QWidget(accCard);
     m_accountsListBox->setStyleSheet("background: transparent;");
     QVBoxLayout *listLayout = new QVBoxLayout(m_accountsListBox);
@@ -269,7 +288,7 @@ void MyInfoPage::setupUI()
     connect(btnCloseAcc, SIGNAL(clicked()), this, SLOT(openCloseAccountDialog()));
 }
 
-// ── 서버 요청 ─────────────────────────────────────────────────────────────────
+/** 서버에 사용자 정보와 계좌 목록을 연속으로 요청한다. */
 void MyInfoPage::loadUserInfo()
 {
     QJsonObject req1;
@@ -285,7 +304,11 @@ void MyInfoPage::loadUserInfo()
     NetworkClient::instance()->sendRequest(req2);
 }
 
-// ── 비밀번호 변경 다이얼로그 ──────────────────────────────────────────────────
+/**
+ * 비밀번호 변경 다이얼로그를 구성하고 모달로 실행한다.
+ * 현재·새·확인 비밀번호 필드를 m_currentPwEdit, m_newPwEdit, m_confirmPwEdit에 저장해
+ * onChangePwOkClicked()에서 접근한다.
+ */
 void MyInfoPage::openChangePasswordDialog()
 {
     m_changePwDlg = new QDialog(this);
@@ -302,6 +325,7 @@ void MyInfoPage::openChangePasswordDialog()
     layout->addWidget(title);
     layout->addSpacing(8);
 
+    // (라벨 텍스트, QLineEdit 포인터)를 세로로 배치하는 람다
     auto addField = [&](const QString &labelText, QLineEdit *&edit) {
         QLabel *lbl = new QLabel(labelText);
         lbl->setStyleSheet(AppStyle::LABEL_MUTED);
@@ -339,6 +363,14 @@ void MyInfoPage::openChangePasswordDialog()
     m_changePwDlg->exec();
 }
 
+/**
+ * 비밀번호 변경 유효성 검사:
+ * - 빈 값 여부
+ * - 새 비밀번호 6자 이상
+ * - 새 비밀번호 == 확인 비밀번호
+ * - 현재 != 새 비밀번호
+ * 통과 시 서버에 "change_password" 요청을 전송하고 다이얼로그를 accept()한다.
+ */
 void MyInfoPage::onChangePwOkClicked()
 {
     if (m_currentPwEdit->text().isEmpty() || m_newPwEdit->text().isEmpty()) {
@@ -353,7 +385,7 @@ void MyInfoPage::onChangePwOkClicked()
         showMsg(m_changePwDlg, QMessageBox::Warning, "오류", "새 비밀번호가 일치하지 않습니다.");
         return;
     }
-    if (m_currentPwEdit->text() == m_newPwEdit->text()){
+    if (m_currentPwEdit->text() == m_newPwEdit->text()) {
         showMsg(m_changePwDlg, QMessageBox::Warning, "오류", "현재 비밀번호와 새 비밀번호가 같습니다.");
         return;
     }
@@ -371,9 +403,13 @@ void MyInfoPage::onChangePwOkClicked()
     m_changePwDlg->accept();
 }
 
-// ── 계좌 해지 다이얼로그 ──────────────────────────────────────────────────────
-// 핵심: dlg->accept() 제거 — 다이얼로그를 열어둔 채로 서버 응답을
-//       MyInfoPage::onNetworkResponse 에서 받아서 처리함
+/**
+ * 계좌 해지 다이얼로그를 구성하고 모달로 실행한다.
+ * 보유 계좌(m_accountList)가 없으면 알림만 표시한다.
+ *
+ * 중요: 해지 요청 전송 후 다이얼로그를 열어둔 채로 서버 응답을 기다린다.
+ * "close_account_response" 성공 수신 시 onNetworkResponse에서 accept()를 호출한다.
+ */
 void MyInfoPage::openCloseAccountDialog()
 {
     if (m_accountList.isEmpty()) {
@@ -416,8 +452,8 @@ void MyInfoPage::openCloseAccountDialog()
     layout->addWidget(m_closeAccPwEdit);
     layout->addSpacing(12);
 
-    m_closeAccOkBtn         = new QPushButton("해지");
-    QPushButton *btnCancel  = new QPushButton("취소");
+    m_closeAccOkBtn        = new QPushButton("해지");
+    QPushButton *btnCancel = new QPushButton("취소");
     m_closeAccOkBtn->setMinimumHeight(42);
     btnCancel->setMinimumHeight(42);
     m_closeAccOkBtn->setCursor(Qt::PointingHandCursor);
@@ -431,12 +467,17 @@ void MyInfoPage::openCloseAccountDialog()
     btnRow->addWidget(btnCancel);
     layout->addLayout(btnRow);
 
-    connect(btnCancel,      SIGNAL(clicked()), m_closeAccDlg, SLOT(reject()));
-    connect(m_closeAccOkBtn, SIGNAL(clicked()), this,         SLOT(onCloseAccOkClicked()));
+    connect(btnCancel,       SIGNAL(clicked()), m_closeAccDlg, SLOT(reject()));
+    connect(m_closeAccOkBtn, SIGNAL(clicked()), this,          SLOT(onCloseAccOkClicked()));
 
     m_closeAccDlg->exec();
 }
 
+/**
+ * 비밀번호 공백 확인 후 사용자에게 최종 확인 질문을 표시한다.
+ * 확인 시 서버에 "close_account" 요청을 전송하고 해지 버튼을 비활성화한다.
+ * 응답은 onNetworkResponse의 "close_account_response"에서 처리된다.
+ */
 void MyInfoPage::onCloseAccOkClicked()
 {
     if (m_closeAccPwEdit->text().isEmpty()) {
@@ -463,10 +504,27 @@ void MyInfoPage::onCloseAccOkClicked()
     request["token"] = SessionContext::instance().token();
     request["data"]  = data;
     NetworkClient::instance()->sendRequest(request);
-    // 응답은 onNetworkResponse 에서 처리 → close_account_response 성공 시 m_closeAccDlg->accept()
 }
 
-// ── 서버 응답 처리 ────────────────────────────────────────────────────────────
+/**
+ * 서버 응답을 타입별로 분기 처리한다.
+ *
+ * get_user_info_response:
+ *   - 아이디·이름·가입일·아바타·헤더 이름·경과일을 갱신한다.
+ *   - 날짜는 ISO 8601 및 밀리초 형식 모두 파싱을 시도한다.
+ *
+ * list_accounts_response:
+ *   - m_accountsListBox의 기존 행을 제거하고 계좌별 새 행을 추가한다.
+ *   - m_totalBalance, m_accountList, 통계 카드 값을 갱신한다.
+ *   - 계좌가 없으면 안내 문구를 표시한다.
+ *
+ * change_password_response:
+ *   - 성공/실패 메시지를 표시한다.
+ *
+ * close_account_response:
+ *   - 성공 시 m_closeAccDlg를 accept()로 닫고 정보를 재로드한다.
+ *   - 실패 시 해지 버튼을 다시 활성화하고 오류 메시지를 표시한다.
+ */
 void MyInfoPage::onNetworkResponse(const QJsonObject &resp)
 {
     const QString type   = resp["type"].toString();
@@ -483,6 +541,7 @@ void MyInfoPage::onNetworkResponse(const QJsonObject &resp)
         if (m_avatarLabel)
             m_avatarLabel->setText(name.isEmpty() ? "?" : name.left(1));
 
+        // 서버 날짜는 ISO 8601 또는 밀리초 형식일 수 있으므로 순차 파싱
         QString rawDate = user["createdAt"].toString();
         QDateTime dt = QDateTime::fromString(rawDate, Qt::ISODate);
         if (!dt.isValid())
@@ -508,7 +567,7 @@ void MyInfoPage::onNetworkResponse(const QJsonObject &resp)
         m_totalBalance = 0.0;
         const QJsonArray accounts = resp["data"].toObject()["accounts"].toArray();
 
-        // 기존 계좌 행 제거
+        // 기존 계좌 행을 모두 제거한다
         if (m_accountsListBox) {
             QLayout *ll = m_accountsListBox->layout();
             QLayoutItem *item;
@@ -532,6 +591,7 @@ void MyInfoPage::onNetworkResponse(const QJsonObject &resp)
 
             if (!listLayout) continue;
 
+            // 타입 배지 + 계좌번호 + 잔액으로 구성된 행 위젯
             QFrame *row = new QFrame(m_accountsListBox);
             row->setStyleSheet(
                 "QFrame {"
@@ -543,6 +603,7 @@ void MyInfoPage::onNetworkResponse(const QJsonObject &resp)
             rl->setContentsMargins(16, 12, 16, 12);
             rl->setSpacing(12);
 
+            // savings: 파란 배지, checking: 초록 배지
             QLabel *typeBadge = new QLabel(accType, row);
             const bool savings = (accType == "savings");
             typeBadge->setStyleSheet(QString(
@@ -572,6 +633,7 @@ void MyInfoPage::onNetworkResponse(const QJsonObject &resp)
             listLayout->addWidget(row);
         }
 
+        // 계좌가 없을 때 안내 문구 표시
         if (listLayout && accounts.isEmpty()) {
             QLabel *empty = new QLabel("보유 중인 계좌가 없습니다.", m_accountsListBox);
             empty->setAlignment(Qt::AlignCenter);
@@ -597,6 +659,7 @@ void MyInfoPage::onNetworkResponse(const QJsonObject &resp)
 
     else if (type == "close_account_response") {
         if (status == "success") {
+            // 다이얼로그를 닫고 포인터를 nullptr로 초기화해 dangling 참조를 방지한다
             if (m_closeAccDlg) {
                 m_closeAccDlg->accept();
                 m_closeAccDlg = nullptr;
