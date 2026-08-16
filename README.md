@@ -181,4 +181,3 @@ TCP 스트림 위에서 **Compact JSON 1건 + `\n`**을 하나의 메시지로 �
 ## 저장소
 
 - 원격: <https://github.com/VEDA-4th-Project1/GUI-project>
-- 작업 브랜치: `main`, `NJD`, `LHW`, `lys`
