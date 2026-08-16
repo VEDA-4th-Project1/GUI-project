@@ -175,9 +175,3 @@ TCP 스트림 위에서 **Compact JSON 1건 + `\n`**을 하나의 메시지로 �
 - 서버 주소와 포트가 클라이언트에 하드코딩되어 있습니다.
 - `Server/protocol.h`에 `check_id` 상수가 없고, 클라이언트는 요청 타입을 문자열 리터럴로 직접 사용합니다.
 - 자동화된 테스트가 없습니다.
-
----
-
-## 저장소
-
-- 원격: <https://github.com/VEDA-4th-Project1/GUI-project>
